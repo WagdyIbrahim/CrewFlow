@@ -603,6 +603,7 @@ function renderPersonDetail(main){
       var o=x.order;
       html+='<div class="timeline-item"><div class="date">'+fmtDate(o.start_date)+(o.end_date!==o.start_date?'<br>→ '+fmtDate(o.end_date):'')+'</div>'+
         '<div style="flex:1"><strong>'+esc(o.client_name)+'</strong> <span class="badge '+o.status+'">'+STATUS_LABELS[o.status]+'</span><br>'+
+        
         '<span style="color:var(--muted);font-size:12px">🎭 '+esc(x.roles.join(', '))+' • 📍 '+esc(o.location||'—')+'</span></div></div>';
     });
     html+='</div>';
