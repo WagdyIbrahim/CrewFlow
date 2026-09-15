@@ -1,8 +1,15 @@
 document.addEventListener("DOMContentLoaded",function(){
+  const dash=document.querySelector(".dashboard");
+  if(dash){
+    DASHBOARD_HTML=dash.innerHTML;
+  }
+
   setupNavigation();
   setupGlobalActions();
   updateDashboardStats();
 });
+
+var DASHBOARD_HTML=null;
 
 function setupNavigation(){
   const navItems=document.querySelectorAll(".nav-item");
@@ -136,6 +143,7 @@ function saveAssignmentHistory(history){
     JSON.stringify(history)
   );
 }
+
 function escapeHtml(value){
   return String(value??"")
     .replace(/&/g,"&amp;")
@@ -225,6 +233,7 @@ function getAssignmentHistoryForPerson(personId){
     return String(historyItem.personId)===String(personId);
   });
 }
+
 function statusLabel(status){
   const labels={
     draft:"Draft",
@@ -254,12 +263,16 @@ function syncEventAssignmentStatus(eventId){
     return;
   }
 
+  /*
+   * Do not touch terminal or in-progress statuses,
+   * and respect manual draft status.
+   */
   if(
     event.status==="completed"||
     event.status==="cancelled"||
-    event.status==="in-progress"
+    event.status==="in-progress"||
+    event.status==="draft"
   ){
-    saveEvents(events);
     return;
   }
 
@@ -272,17 +285,30 @@ function syncEventAssignmentStatus(eventId){
     );
   }).length;
 
+  let newStatus=event.status;
+
   if(required>0&&assignedCount>=required){
-    event.status="assigned";
+    newStatus="assigned";
   }else if(event.status==="assigned"){
-    event.status="open";
+    newStatus="open";
   }
 
-  saveEvents(events);
+  if(newStatus!==event.status){
+    event.status=newStatus;
+    saveEvents(events);
+  }
 }
 
 function showDashboard(){
-  window.location.reload();
+  const dash=document.querySelector(".dashboard");
+
+  if(!dash||!DASHBOARD_HTML){
+    window.location.reload();
+    return;
+  }
+
+  dash.innerHTML=DASHBOARD_HTML;
+  updateDashboardStats();
 }
 
 function updateDashboardStats(){
@@ -1011,6 +1037,19 @@ function showEventDetails(eventId){
         })
       );
 
+      /* Mark related history as cancelled */
+      const hist=getAssignmentHistory().map(function(h){
+        if(
+          String(h.eventId)===String(eventId)&&
+          h.status!=="cancelled"
+        ){
+          h.status="cancelled";
+          h.cancelledAt=new Date().toISOString();
+        }
+        return h;
+      });
+      saveAssignmentHistory(hist);
+
       alert("Event deleted successfully.");
 
       showEventsPage();
@@ -1178,7 +1217,7 @@ function skillMatchScore(event,person){
     normalizeList(person.skills);
 
   if(required.length===0){
-    return 40;
+    return 50;
   }
 
   let matched=0;
@@ -1204,7 +1243,7 @@ function skillMatchScore(event,person){
   });
 
   return Math.round(
-    (matched/required.length)*40
+    (matched/required.length)*50
   );
 }
 
@@ -1247,7 +1286,7 @@ function getMatchedSkills(event,person){
   };
 }
 
-function calculateMatchScore(event,person){
+function calculateMatchScore(event,person,counts){
 
   const reasons=[];
   const warnings=[];
@@ -1255,8 +1294,18 @@ function calculateMatchScore(event,person){
   const availability=
     person.availability||"Available";
 
+  const activeCount=
+    counts&&typeof counts.activeCount==="number"
+      ?counts.activeCount
+      :getActiveAssignmentsForPerson(person.id).length;
+
+  const historyCount=
+    counts&&typeof counts.historyCount==="number"
+      ?counts.historyCount
+      :getAssignmentHistoryForPerson(person.id).length;
+
   /*
-   * HARD EXCLUSION FLAGS
+   * HARD EXCLUSIONS
    */
 
   if(availability==="Unavailable"){
@@ -1266,9 +1315,8 @@ function calculateMatchScore(event,person){
       score:0,
       reasons:[],
       warnings:["Currently unavailable"],
-      assignmentCount:getActiveAssignmentsForPerson(
-        person.id
-      ).length,
+      assignmentCount:activeCount,
+      historyCount:historyCount,
       matchedSkills:[],
       missingSkills:normalizeList(event.skills)
     };
@@ -1282,9 +1330,8 @@ function calculateMatchScore(event,person){
       score:0,
       reasons:[],
       warnings:["Travel is required but this person is not available for travel"],
-      assignmentCount:getActiveAssignmentsForPerson(
-        person.id
-      ).length,
+      assignmentCount:activeCount,
+      historyCount:historyCount,
       matchedSkills:[],
       missingSkills:normalizeList(event.skills)
     };
@@ -1298,9 +1345,8 @@ function calculateMatchScore(event,person){
       score:0,
       reasons:[],
       warnings:["Overnight is required but this person is not available"],
-      assignmentCount:getActiveAssignmentsForPerson(
-        person.id
-      ).length,
+      assignmentCount:activeCount,
+      historyCount:historyCount,
       matchedSkills:[],
       missingSkills:normalizeList(event.skills)
     };
@@ -1314,9 +1360,8 @@ function calculateMatchScore(event,person){
       score:0,
       reasons:[],
       warnings:["Weekend availability is required but not confirmed"],
-      assignmentCount:getActiveAssignmentsForPerson(
-        person.id
-      ).length,
+      assignmentCount:activeCount,
+      historyCount:historyCount,
       matchedSkills:[],
       missingSkills:normalizeList(event.skills)
     };
@@ -1324,126 +1369,84 @@ function calculateMatchScore(event,person){
   }
 
   /*
-   * SKILLS — 40 POINTS
+   * SKILLS — 50 POINTS
    */
 
   const skillResult=
     getMatchedSkills(event,person);
 
-  const skillScore=
-    skillMatchScore(event,person);
+  const requiredSkills=
+    normalizeList(event.skills);
 
-  let score=skillScore;
+  let score=0;
 
+  if(requiredSkills.length===0){
 
-  if(skillResult.matched.length===normalizeList(event.skills).length&&
-     normalizeList(event.skills).length>0){
-
-    reasons.push("All required skills matched");
-
-  }else if(skillResult.matched.length>0){
-
-    reasons.push(
-      skillResult.matched.length+
-      " required skill"+
-      (skillResult.matched.length===1?"":"s")+
-      " matched"
-    );
-
-    warnings.push(
-      "Missing skills: "+
-      skillResult.missing.join(", ")
-    );
-
-  }else if(normalizeList(event.skills).length>0){
-
-    warnings.push("Required skills not matched");
+    score+=50;
+    reasons.push("No specific skills required");
 
   }else{
 
-    reasons.push("No specific skills required");
+    const ratio=
+      skillResult.matched.length/requiredSkills.length;
+
+    score+=Math.round(ratio*50);
+
+    if(skillResult.matched.length===requiredSkills.length){
+
+      reasons.push("All required skills matched");
+
+    }else if(skillResult.matched.length>0){
+
+      reasons.push(
+        skillResult.matched.length+
+        " of "+
+        requiredSkills.length+
+        " skills matched"
+      );
+
+      warnings.push(
+        "Missing skills: "+
+        skillResult.missing.join(", ")
+      );
+
+    }else{
+
+      warnings.push("Required skills not matched");
+
+    }
 
   }
 
   /*
-   * AVAILABILITY — 20 POINTS
+   * AVAILABILITY — 25 POINTS
    */
 
   if(availability==="Available"){
 
-    score+=20;
+    score+=25;
     reasons.push("Available");
 
   }else if(availability==="Limited"){
 
-    score+=10;
+    score+=12;
     reasons.push("Limited availability");
     warnings.push("Limited availability");
 
   }
 
   /*
-   * TRAVEL — 10 POINTS
-   */
-
-  if(event.travel){
-
-    score+=10;
-    reasons.push("Travel available");
-
-  }else{
-
-    score+=10;
-    reasons.push("Travel not required");
-
-  }
-
-  /*
-   * OVERNIGHT — 10 POINTS
-   */
-
-  if(event.overnight){
-
-    score+=10;
-    reasons.push("Overnight available");
-
-  }else{
-
-    score+=10;
-    reasons.push("Overnight not required");
-
-  }
-
-  /*
-   * WEEKEND — 5 POINTS
-   */
-
-  if(event.weekend){
-
-    score+=5;
-    reasons.push("Weekend available");
-
-  }else{
-
-    score+=5;
-    reasons.push("Weekend not required");
-
-  }
-
-  /*
-   * RATING — 10 POINTS
+   * RATING — 15 POINTS
    */
 
   const rating=
     parseFloat(person.rating)||0;
 
-  const ratingScore=
+  score+=
     Math.min(
-      Math.max(rating,0)/5*10,
-      10
+      Math.max(rating,0)/5*15,
+      15
     );
-
-  score+=ratingScore;
 
   if(rating>=4){
 
@@ -1464,7 +1467,7 @@ function calculateMatchScore(event,person){
   }
 
   /*
-   * LOCATION — 5 POINTS
+   * LOCATION — 10 POINTS
    */
 
   const eventLocation=
@@ -1479,7 +1482,7 @@ function calculateMatchScore(event,person){
 
   if(!eventLocation){
 
-    score+=5;
+    score+=10;
     reasons.push("No location restriction");
 
   }else if(
@@ -1491,7 +1494,7 @@ function calculateMatchScore(event,person){
     )
   ){
 
-    score+=5;
+    score+=10;
     reasons.push("Same or matching location");
 
   }else{
@@ -1501,26 +1504,19 @@ function calculateMatchScore(event,person){
   }
 
   /*
-   * PREVIOUS ASSIGNMENTS
-   *
-   * Fairness is NOT added to the score yet.
-   * We only keep the assignment count for
-   * later rotation/fairness logic.
+   * PREVIOUS ASSIGNMENTS (history) — for fairness only
    */
 
-  const completedAssignments=
-  getAssignmentHistoryForPerson(person.id).length;
-
-  if(completedAssignments===0){
+  if(historyCount===0){
 
     reasons.push("No previous assignments");
 
   }else{
 
     reasons.push(
-      completedAssignments+
+      historyCount+
       " previous assignment"+
-      (completedAssignments===1?"":"s")
+      (historyCount===1?"":"s")
     );
 
   }
@@ -1539,7 +1535,8 @@ function calculateMatchScore(event,person){
     score:score,
     reasons:reasons,
     warnings:warnings,
-    assignmentCount:completedAssignments,
+    assignmentCount:activeCount,
+    historyCount:historyCount,
     matchedSkills:skillResult.matched,
     missingSkills:skillResult.missing
   };
@@ -1588,6 +1585,45 @@ function isPersonHardExcluded(event,person){
   return false;
 }
 
+function hasTimeConflict(personId,event,excludeEventId){
+
+  const events=getEvents();
+  const assignments=getAssignments();
+
+  const personAssignments=
+    assignments.filter(function(a){
+      return (
+        String(a.personId)===String(personId)&&
+        a.status!=="cancelled"&&
+        String(a.eventId)!==String(excludeEventId||"")
+      );
+    });
+
+  return personAssignments.some(function(a){
+
+    const other=events.find(function(e){
+      return String(e.id)===String(a.eventId);
+    });
+
+    if(!other||!other.date||!event.date){
+      return false;
+    }
+
+    if(other.date!==event.date){
+      return false;
+    }
+
+    const oStart=other.startTime||other.callTime||"00:00";
+    const oEnd=other.endTime||"23:59";
+    const eStart=event.startTime||event.callTime||"00:00";
+    const eEnd=event.endTime||"23:59";
+
+    /* string compare works for HH:MM 24h format */
+    return eStart<oEnd&&eEnd>oStart;
+
+  });
+}
+
 function getAssignmentCandidates(eventId){
 
   const event=getEventById(eventId);
@@ -1606,6 +1642,26 @@ function getAssignmentCandidates(eventId){
       return String(assignment.personId);
     });
 
+  /* Pre-compute counts once for performance */
+  const allAssignments=getAssignments();
+  const allHistory=getAssignmentHistory();
+
+  const activeCounts={};
+  const historyCounts={};
+
+  allAssignments.forEach(function(a){
+    if(a.status==="cancelled"){
+      return;
+    }
+    const pid=String(a.personId);
+    activeCounts[pid]=(activeCounts[pid]||0)+1;
+  });
+
+  allHistory.forEach(function(h){
+    const pid=String(h.personId);
+    historyCounts[pid]=(historyCounts[pid]||0)+1;
+  });
+
   const candidates=
     people
       .filter(function(person){
@@ -1622,15 +1678,25 @@ function getAssignmentCandidates(eventId){
           return false;
         }
 
+        if(hasTimeConflict(person.id,event,event.id)){
+          return false;
+        }
+
         return true;
 
       })
       .map(function(person){
 
+        const counts={
+          activeCount:activeCounts[String(person.id)]||0,
+          historyCount:historyCounts[String(person.id)]||0
+        };
+
         const match=
           calculateMatchScore(
             event,
-            person
+            person,
+            counts
           );
 
         return {
@@ -1638,7 +1704,8 @@ function getAssignmentCandidates(eventId){
           score:match.score,
           reasons:match.reasons,
           warnings:match.warnings,
-          assignmentCount:match.assignmentCount,
+          assignmentCount:match.historyCount,
+          activeCount:match.assignmentCount,
           matchedSkills:match.matchedSkills,
           missingSkills:match.missingSkills,
           eligible:match.eligible
@@ -1655,11 +1722,6 @@ function getAssignmentCandidates(eventId){
         if(b.score!==a.score){
           return b.score-a.score;
         }
-
-        /*
-         * Fairness tie-breaker only.
-         * It does not reduce a person's score.
-         */
 
         if(
           a.assignmentCount!==
@@ -2207,8 +2269,8 @@ function renderAssignmentCandidates(
               ${totalExcluded}
               people were excluded because of
               availability, travel, overnight,
-              weekend requirements, or existing
-              assignment.
+              weekend requirements, time conflict,
+              or existing assignment.
             </small>
           `
           :""
@@ -2679,6 +2741,15 @@ function assignPersonToEvent(
     return;
   }
 
+  if(hasTimeConflict(person.id,event,event.id)){
+
+    alert(
+      "This person is already assigned to another event at the same time."
+    );
+
+    return;
+  }
+
   const assignments=
     getAssignments();
 
@@ -2759,62 +2830,40 @@ function assignPersonToEvent(
     overrideReason:""
   };
 
- assignments.push(assignment);
+  assignments.push(assignment);
 
-saveAssignments(assignments);
+  saveAssignments(assignments);
 
-/*
- * ASSIGNMENT HISTORY
- *
- * Keep a permanent record of this assignment
- * for future fairness / rotation calculations.
- */
-const history=getAssignmentHistory();
+  /*
+   * ASSIGNMENT HISTORY
+   *
+   * Keep a permanent record of this assignment
+   * for future fairness / rotation calculations.
+   */
+  const history=getAssignmentHistory();
 
-history.push({
-  id:generateId("history"),
-  assignmentId:assignment.id,
-  eventId:event.id,
-  personId:person.id,
-  score:match.score,
-  reasons:match.reasons,
-  matchedSkills:match.matchedSkills,
-  missingSkills:match.missingSkills,
-  assignedAt:assignment.assignedAt,
-  status:"assigned",
-  completedAt:null,
-  cancelledAt:null
-});
+  history.push({
+    id:generateId("history"),
+    assignmentId:assignment.id,
+    eventId:event.id,
+    personId:person.id,
+    score:match.score,
+    reasons:match.reasons,
+    matchedSkills:match.matchedSkills,
+    missingSkills:match.missingSkills,
+    assignedAt:assignment.assignedAt,
+    status:"assigned",
+    completedAt:null,
+    cancelledAt:null
+  });
 
-saveAssignmentHistory(history);
+  saveAssignmentHistory(history);
 
-const newAssignedCount=
-  currentAssigned+1;
-  if(
-    required>0&&
-    newAssignedCount>=required
-  ){
-
-    event.status="assigned";
-
-  }else if(
-    event.status==="assigned"
-  ){
-
-    event.status="open";
-
-  }else if(
-    event.status!=="draft"&&
-    event.status!=="in-progress"&&
-    event.status!=="completed"&&
-    event.status!=="cancelled"
-  ){
-
-    event.status="open";
-
-  }
-
-  saveEvents(events);
+  /*
+   * Let sync handle the event status logic.
+   * No duplicated logic here.
+   */
+  syncEventAssignmentStatus(event.id);
 
   alert(
     person.name+
@@ -2880,46 +2929,17 @@ function removeAssignment(
 
   saveAssignments(remaining);
 
-  const events=getEvents();
-
-  const event=
-    events.find(function(item){
-
-      return String(item.id)===
-        String(eventId);
-
-    });
-
-  if(event){
-
-    const required=
-      Number(event.headcount)||0;
-
-    const assignedCount=
-      remaining.filter(function(item){
-
-        return (
-          String(item.eventId)===
-            String(event.id)&&
-          item.status!=="cancelled"
-        );
-
-      }).length;
-
-    if(
-      event.status==="assigned"&&
-      (
-        required===0||
-        assignedCount<required
-      )
-    ){
-
-      event.status="open";
-
+  /* Mark the corresponding history entry as cancelled */
+  const hist=getAssignmentHistory().map(function(h){
+    if(String(h.assignmentId)===String(assignmentId)){
+      h.status="cancelled";
+      h.cancelledAt=new Date().toISOString();
     }
+    return h;
+  });
+  saveAssignmentHistory(hist);
 
-    saveEvents(events);
-  }
+  syncEventAssignmentStatus(eventId);
 
   showAssignmentWorkspace(
     eventId
@@ -4855,32 +4875,51 @@ function showPersonDetails(personId){
           return;
         }
 
-        const people=
-          getPeople().filter(
-            function(item){
+        /* Track affected events */
+        const affectedEventIds=
+          getAssignments()
+            .filter(function(a){
+              return (
+                String(a.personId)===String(person.id)&&
+                a.status!=="cancelled"
+              );
+            })
+            .map(function(a){return String(a.eventId);});
 
-              return String(item.id)!==
-                String(person.id);
-
-            }
-          );
-
-        savePeople(people);
-
-        const assignments=
-          getAssignments().filter(
-            function(assignment){
-
-              return String(
-                assignment.personId
-              )!==String(person.id);
-
-            }
-          );
-
-        saveAssignments(
-          assignments
+        /* Remove person */
+        savePeople(
+          getPeople().filter(function(item){
+            return String(item.id)!==
+              String(person.id);
+          })
         );
+
+        /* Remove their active assignments */
+        saveAssignments(
+          getAssignments().filter(function(a){
+            return String(a.personId)!==
+              String(person.id);
+          })
+        );
+
+        /* Mark their history entries as cancelled */
+        const hist=
+          getAssignmentHistory().map(function(h){
+            if(
+              String(h.personId)===String(person.id)&&
+              h.status!=="cancelled"
+            ){
+              h.status="cancelled";
+              h.cancelledAt=new Date().toISOString();
+            }
+            return h;
+          });
+        saveAssignmentHistory(hist);
+
+        /* Sync affected events */
+        affectedEventIds.forEach(function(id){
+          syncEventAssignmentStatus(id);
+        });
 
         alert(
           "Person deleted successfully."
