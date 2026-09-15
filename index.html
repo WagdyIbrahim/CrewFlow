@@ -3,298 +3,723 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CrewFlow — نظام توزيع الأطقم</title>
+<title>CrewFlow — إدارة العمليات</title>
 <style>
-:root{--bg:#f5f7fb;--card:#fff;--border:#e3e7ef;--text:#1a2233;--muted:#6b7690;--primary:#2563eb;--primary-dark:#1d4ed8;--success:#16a34a;--danger:#dc2626;--radius:12px}
+:root{--bg:#f5f7fb;--card:#fff;--border:#e3e7ef;--text:#1a2233;--muted:#6b7690;--primary:#2563eb;--primary-dark:#1d4ed8;--success:#16a34a;--warning:#d97706;--danger:#dc2626;--info:#0891b2;--radius:12px}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,"Segoe UI",Tahoma,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;line-height:1.6}
-.topbar{background:var(--card);border-bottom:1px solid var(--border);padding:16px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;position:sticky;top:0;z-index:10;flex-wrap:wrap}
-.brand{font-size:20px;font-weight:700;color:var(--primary)}
-.tabs{display:flex;gap:8px;flex-wrap:wrap}
-.tabs button{background:transparent;border:1px solid var(--border);padding:8px 16px;border-radius:999px;cursor:pointer;font-size:14px;color:var(--muted);font-family:inherit}
-.tabs button:hover{background:#eef2fb}
-.tabs button.active{background:var(--primary);color:#fff;border-color:var(--primary)}
-main{max-width:960px;margin:0 auto;padding:24px}
-.page-header{margin-bottom:24px}
-.page-header h1{font-size:24px;margin-bottom:4px}
-.page-header p{color:var(--muted);font-size:14px}
-.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:16px}
-.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
-.form-group{display:flex;flex-direction:column;gap:6px}
+.topbar{background:var(--card);border-bottom:1px solid var(--border);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brand{font-size:18px;font-weight:700;color:var(--primary)}
+.manager-box{display:flex;align-items:center;gap:8px;font-size:13px}
+.manager-box select{padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:14px;background:#fff}
+.tabs{background:var(--card);border-bottom:1px solid var(--border);padding:0 12px;display:flex;gap:4px;overflow-x:auto;position:sticky;top:0;z-index:10}
+.tabs button{background:transparent;border:none;padding:14px 14px;cursor:pointer;font-size:14px;color:var(--muted);font-family:inherit;white-space:nowrap;border-bottom:2px solid transparent}
+.tabs button.active{color:var(--primary);border-bottom-color:var(--primary);font-weight:600}
+main{max-width:1000px;margin:0 auto;padding:20px}
+h1{font-size:22px;margin-bottom:4px}
+h2{font-size:17px;margin:20px 0 10px}
+.sub{color:var(--muted);font-size:13px;margin-bottom:16px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:14px}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+.form-group{display:flex;flex-direction:column;gap:4px}
 .form-group.full{grid-column:1/-1}
-label{font-size:13px;font-weight:600;color:var(--muted)}
-input,textarea,select{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:15px;font-family:inherit;background:#fff;color:var(--text)}
+label{font-size:12px;font-weight:600;color:var(--muted)}
+input,textarea,select{width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;background:#fff;color:var(--text)}
 input:focus,textarea:focus,select:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
-textarea{resize:vertical;min-height:80px}
-.btn{padding:10px 20px;border-radius:8px;border:none;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit}
+textarea{resize:vertical;min-height:70px}
+input[type=checkbox]{width:auto}
+.btn{padding:9px 16px;border-radius:8px;border:none;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s}
 .btn-primary{background:var(--primary);color:#fff}
 .btn-primary:hover{background:var(--primary-dark)}
 .btn-secondary{background:#eef2fb;color:var(--primary)}
 .btn-secondary:hover{background:#dde7fa}
 .btn-danger{background:#fee2e2;color:var(--danger)}
 .btn-danger:hover{background:#fecaca}
-.btn-sm{padding:6px 12px;font-size:13px}
-.roles-list{display:flex;flex-direction:column;gap:10px;margin-top:12px}
-.role-row{display:grid;grid-template-columns:1fr 100px 40px;gap:8px;align-items:center}
-.role-row button{background:#fee2e2;color:var(--danger);border:none;border-radius:8px;height:40px;cursor:pointer;font-size:18px}
-.form-actions{display:flex;gap:12px;margin-top:24px;flex-wrap:wrap}
-.order-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:12px}
-.order-card h3{font-size:18px;margin-bottom:8px}
-.order-meta{display:flex;flex-wrap:wrap;gap:12px;color:var(--muted);font-size:13px;margin-bottom:16px}
-.roles-status{display:flex;flex-direction:column;gap:8px}
-.role-status{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#f8fafc;border-radius:8px;font-size:14px}
-.role-status .role-name{font-weight:600}
-.role-status .role-count{color:var(--muted)}
-.role-status.complete .role-count{color:var(--success);font-weight:600}
-.empty-state{text-align:center;padding:48px 24px;color:var(--muted)}
-.empty-state .icon{font-size:48px;margin-bottom:12px}
-.person-card{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:8px;gap:12px;flex-wrap:wrap}
-.person-info h4{font-size:15px;margin-bottom:2px}
-.person-info p{font-size:13px;color:var(--muted)}
-.badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600}
+.btn-success{background:#dcfce7;color:var(--success)}
+.btn-warning{background:#fef3c7;color:var(--warning)}
+.btn-sm{padding:5px 10px;font-size:12px}
+.form-actions{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
+.empty-state{text-align:center;padding:40px 20px;color:var(--muted)}
+.empty-state .icon{font-size:40px;margin-bottom:10px}
+.item-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:10px}
+.item-card.done_ok{border-color:var(--success);background:#f0fdf4}
+.item-card.done_issues{border-color:var(--warning);background:#fffbeb}
+.item-card.cancelled{opacity:.6}
+.item-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+.item-head h3{font-size:16px}
+.meta{display:flex;flex-wrap:wrap;gap:10px;color:var(--muted);font-size:12px;margin-bottom:10px}
+.badge{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:600}
 .badge.employee{background:#dbeafe;color:#1e40af}
 .badge.freelancer{background:#fef3c7;color:#92400e}
-.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:#1a2233;color:#fff;padding:12px 24px;border-radius:8px;font-size:14px;transition:transform .3s;z-index:100}
+.badge.driver{background:#e0e7ff;color:#3730a3}
+.badge.open{background:#dbeafe;color:#1e40af}
+.badge.assigned{background:#d1fae5;color:#065f46}
+.badge.in_progress{background:#fef3c7;color:#92400e}
+.badge.done_ok{background:#dcfce7;color:#166534}
+.badge.done_issues{background:#fed7aa;color:#9a3412}
+.badge.cancelled{background:#f3f4f6;color:#6b7280}
+.badge.internal{background:#e0e7ff;color:#3730a3}
+.badge.rented{background:#fce7f3;color:#9d174d}
+.role-row{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:#f8fafc;border-radius:6px;font-size:13px;margin-bottom:4px}
+.role-row.complete{background:#f0fdf4;color:var(--success);font-weight:600}
+.role-row .warn{color:var(--warning);font-size:11px}
+.assigned-list{display:flex;flex-direction:column;gap:4px;margin:8px 0}
+.assigned-person{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:#f8fafc;border-radius:6px;font-size:13px}
+.assigned-person .conflict{color:var(--danger);font-size:11px;margin-right:6px}
+.person-card{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:8px;gap:10px;flex-wrap:wrap}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(100px);background:#1a2233;color:#fff;padding:11px 20px;border-radius:8px;font-size:13px;transition:transform .3s;z-index:100;max-width:90vw}
 .toast.show{transform:translateX(-50%) translateY(0)}
 .toast.success{background:var(--success)}
 .toast.error{background:var(--danger)}
-@media(max-width:600px){main{padding:16px}.card{padding:16px}.topbar{padding:12px 16px}.brand{font-size:18px}.tabs button{padding:6px 12px;font-size:13px}.role-row{grid-template-columns:1fr 80px 36px}}
+.sub-tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+.sub-tabs button{background:#eef2fb;border:none;padding:6px 14px;border-radius:999px;font-size:13px;cursor:pointer;color:var(--muted);font-family:inherit}
+.sub-tabs button.active{background:var(--primary);color:#fff}
+.warn-box{background:#fffbeb;border:1px solid #fde68a;color:#92400e;padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:12px}
+.info-box{background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af;padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:12px}
+@media(max-width:600px){main{padding:14px}.card{padding:14px}}
 </style>
 </head>
 <body>
 
 <header class="topbar">
   <div class="brand">📋 CrewFlow</div>
-  <nav class="tabs">
-    <button data-tab="new-order" class="active">+ أوردر جديد</button>
-    <button data-tab="today">أوردرات اليوم</button>
-    <button data-tab="team">الفريق</button>
-  </nav>
+  <div class="manager-box">
+    <label>المدير المسؤول:</label>
+    <select id="manager-select"></select>
+  </div>
 </header>
+
+<nav class="tabs" id="main-tabs">
+  <button data-tab="orders">الأوردرات</button>
+  <button data-tab="new-order">+ أوردر جديد</button>
+  <button data-tab="team">الفريق</button>
+  <button data-tab="clients">العملاء</button>
+  <button data-tab="equipment">المعدات</button>
+  <button data-tab="vacations">الإجازات</button>
+</nav>
 
 <main id="main"></main>
 <div id="toast" class="toast"></div>
 
 <script>
 (function(){
-  'use strict';
-  var STORAGE_KEYS={orders:'crewflow_orders',people:'crewflow_people'};
-  var ROLES_PRESET=['مصور','صوت','فني','فني سويتشر','مراسل','سائق','عربية','منتج'];
-  var state={currentTab:'new-order',tempRoles:[{role:'مصور',count:1}],orders:[],people:[]};
+'use strict';
 
-  function loadData(){
-    try{state.orders=JSON.parse(localStorage.getItem(STORAGE_KEYS.orders)||'[]');}catch(e){state.orders=[];}
-    try{state.people=JSON.parse(localStorage.getItem(STORAGE_KEYS.people)||'[]');}catch(e){state.people=[];}
-  }
-  function saveOrders(){localStorage.setItem(STORAGE_KEYS.orders,JSON.stringify(state.orders));}
-  function savePeople(){localStorage.setItem(STORAGE_KEYS.people,JSON.stringify(state.people));}
-  function uid(p){return (p||'id')+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,8);}
-  function esc(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');}
-  function todayISO(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
-  function toast(msg,type){var el=document.getElementById('toast');el.textContent=msg;el.className='toast show '+(type||'');clearTimeout(el._t);el._t=setTimeout(function(){el.className='toast '+(type||'');},2500);}
+/* ============================================================
+   Constants
+   ============================================================ */
+var KEYS={people:'cf_people',clients:'cf_clients',equipment:'cf_equipment',unavailability:'cf_unavailability',orders:'cf_orders',managers:'cf_managers',currentManager:'cf_current_manager'};
+var ROLE_PRESET=['مصور','صوت','فني','فني سويتشر','مراسل','سائق','منتج','مخرج','مهندس بث'];
+var EQUIP_CATEGORIES=['كاميرا','صوت','إضاءة','سويتشر','بث','ملحقات','سيارة'];
+var DEFAULT_MANAGERS=['مدير التوزيع 1','مدير التوزيع 2','مدير التوزيع 3'];
+var STATUS_LABELS={open:'مفتوح',assigned:'مكتمل التعيين',in_progress:'جاري',done_ok:'خلص تمام',done_issues:'خلص بمشاكل',cancelled:'ملغي'};
 
-  function render(){
-    var btns=document.querySelectorAll('.tabs button');
-    for(var i=0;i<btns.length;i++){
-      if(btns[i].getAttribute('data-tab')===state.currentTab)btns[i].classList.add('active');
-      else btns[i].classList.remove('active');
+/* ============================================================
+   State
+   ============================================================ */
+var state={
+  currentTab:'orders',
+  managers:DEFAULT_MANAGERS.slice(),
+  currentManager:'مدير التوزيع 1',
+  people:[],clients:[],equipment:[],unavailability:[],orders:[],
+  tempRoles:[{role:'مصور',count:1}],
+  tempEquipment:[],
+  assigningOrderId:null,
+  teamFilter:'all'
+};
+
+/* ============================================================
+   Storage
+   ============================================================ */
+function loadAll(){
+  state.managers=getLS(KEYS.managers)||DEFAULT_MANAGERS.slice();
+  state.currentManager=getLS(KEYS.currentManager)||state.managers[0];
+  state.people=getLS(KEYS.people)||[];
+  state.clients=getLS(KEYS.clients)||[];
+  state.equipment=getLS(KEYS.equipment)||[];
+  state.unavailability=getLS(KEYS.unavailability)||[];
+  state.orders=(getLS(KEYS.orders)||[]).map(migrateOrder);
+}
+function getLS(k){try{var v=localStorage.getItem(k);return v?JSON.parse(v):null;}catch(e){return null;}}
+function setLS(k,v){localStorage.setItem(k,JSON.stringify(v));}
+function saveAll(){
+  setLS(KEYS.managers,state.managers);
+  setLS(KEYS.currentManager,state.currentManager);
+  setLS(KEYS.people,state.people);
+  setLS(KEYS.clients,state.clients);
+  setLS(KEYS.equipment,state.equipment);
+  setLS(KEYS.unavailability,state.unavailability);
+  setLS(KEYS.orders,state.orders);
+}
+function migrateOrder(o){
+  if(!o.start_date&&o.date){o.start_date=o.date;o.end_date=o.date;delete o.date;}
+  if(!o.work_type)o.work_type='external';
+  if(!o.travel_type)o.travel_type='none';
+  if(typeof o.open_ended==='undefined')o.open_ended=false;
+  if(!o.equipment_ids)o.equipment_ids=[];
+  if(!o.status)o.status='open';
+  if(!o.issues)o.issues='';
+  return o;
+}
+
+/* ============================================================
+   Helpers
+   ============================================================ */
+function uid(p){return (p||'id')+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);}
+function esc(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');}
+function todayISO(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function toast(msg,type){var el=document.getElementById('toast');el.textContent=msg;el.className='toast show '+(type||'');clearTimeout(el._t);el._t=setTimeout(function(){el.className='toast '+(type||'');},2500);}
+function getOrder(id){for(var i=0;i<state.orders.length;i++)if(state.orders[i].id===id)return state.orders[i];return null;}
+function getPerson(id){for(var i=0;i<state.people.length;i++)if(state.people[i].id===id)return state.people[i];return null;}
+function getClient(id){for(var i=0;i<state.clients.length;i++)if(state.clients[i].id===id)return state.clients[i];return null;}
+function getEquip(id){for(var i=0;i<state.equipment.length;i++)if(state.equipment[i].id===id)return state.equipment[i];return null;}
+function fmtDate(d){if(!d)return '—';var x=new Date(d+'T00:00:00');if(isNaN(x))return d;return x.toLocaleDateString('ar-EG',{day:'numeric',month:'short',year:'numeric'});}
+
+/* ============================================================
+   Conflict detection
+   ============================================================ */
+function datesOverlap(aS,aE,bS,bE){
+  if(!aS||!bS)return false;
+  var aEnd=aE||'9999-12-31';
+  var bEnd=bE||'9999-12-31';
+  return aS<=bEnd&&bS<=aEnd;
+}
+function getPersonConflicts(personId,orderId){
+  var order=getOrder(orderId);
+  if(!order)return [];
+  var conflicts=[];
+  var myS=order.start_date,myE=order.open_ended?'9999-12-31':order.end_date;
+  for(var i=0;i<state.orders.length;i++){
+    var o=state.orders[i];
+    if(o.id===orderId)continue;
+    if(o.status==='cancelled'||o.status==='done_ok')continue;
+    var assigned=false;
+    for(var r in o.assignments){
+      if(o.assignments[r].indexOf(personId)!==-1){assigned=true;break;}
     }
-    var main=document.getElementById('main');
-    main.innerHTML='';
-    if(state.currentTab==='new-order')renderNewOrder(main);
-    else if(state.currentTab==='today')renderToday(main);
-    else if(state.currentTab==='team')renderTeam(main);
+    if(!assigned)continue;
+    var oS=o.start_date,oE=o.open_ended?'9999-12-31':o.end_date;
+    if(datesOverlap(myS,myE,oS,oE)){
+      conflicts.push({type:'order',order:o});
+    }
   }
+  for(var j=0;j<state.unavailability.length;j++){
+    var u=state.unavailability[j];
+    if(u.person_id!==personId)continue;
+    if(datesOverlap(myS,myE,u.from_date,u.to_date)){
+      conflicts.push({type:'vacation',unavailability:u});
+    }
+  }
+  return conflicts;
+}
+function getEquipConflicts(equipId,orderId){
+  var order=getOrder(orderId);
+  if(!order)return [];
+  var conflicts=[];
+  var myS=order.start_date,myE=order.open_ended?'9999-12-31':order.end_date;
+  for(var i=0;i<state.orders.length;i++){
+    var o=state.orders[i];
+    if(o.id===orderId)continue;
+    if(o.status==='cancelled'||o.status==='done_ok')continue;
+    if(!o.equipment_ids||o.equipment_ids.indexOf(equipId)===-1)continue;
+    var oS=o.start_date,oE=o.open_ended?'9999-12-31':o.end_date;
+    if(datesOverlap(myS,myE,oS,oE)){
+      conflicts.push({type:'order',order:o});
+    }
+  }
+  return conflicts;
+}
 
-  function renderNewOrder(main){
-    main.innerHTML='<div class="page-header"><h1>أوردر جديد</h1><p>حدد العميل، الوقت، المكان، والأدوار.</p></div>'+
-      '<div class="card"><div class="form-grid">'+
-      '<div class="form-group"><label>العميل</label><input id="f-client" type="text" placeholder="Kora Plus"></div>'+
-      '<div class="form-group"><label>التاريخ</label><input id="f-date" type="date" value="'+todayISO()+'"></div>'+
-      '<div class="form-group"><label>ساعة الحضور</label><input id="f-time" type="time" value="10:00"></div>'+
-      '<div class="form-group"><label>ساعة التحرك</label><input id="f-departure" type="time" value="09:00"></div>'+
-      '<div class="form-group full"><label>المكان</label><input id="f-location" type="text" placeholder="مبنى اليوم السابع"></div>'+
-      '</div><div style="margin-top:24px"><label>الأدوار المطلوبة</label><div id="roles-container" class="roles-list"></div>'+
-      '<button type="button" class="btn btn-secondary btn-sm" id="add-role" style="margin-top:12px">+ أضف دور</button></div>'+
-      '<div class="form-actions"><button type="button" class="btn btn-primary" id="save-order">احفظ الأوردر</button>'+
-      '<button type="button" class="btn btn-secondary" id="reset-order">إلغاء</button></div></div>';
+/* ============================================================
+   Render
+   ============================================================ */
+function render(){
+  document.querySelectorAll('#main-tabs button').forEach(function(b){
+    b.classList.toggle('active',b.getAttribute('data-tab')===state.currentTab);
+  });
+  var main=document.getElementById('main');
+  main.innerHTML='';
+  var t=state.currentTab;
+  if(t==='orders')renderOrders(main);
+  else if(t==='new-order')renderNewOrder(main);
+  else if(t==='team')renderTeam(main);
+  else if(t==='clients')renderClients(main);
+  else if(t==='equipment')renderEquipment(main);
+  else if(t==='vacations')renderVacations(main);
+  else if(t==='assign')renderAssign(main);
+}
+
+/* -------- Orders List -------- */
+function renderOrders(main){
+  var today=todayISO();
+  var todayO=[],upcoming=[],past=[];
+  var sorted=state.orders.slice().sort(function(a,b){return (a.start_date||'').localeCompare(b.start_date||'');});
+  sorted.forEach(function(o){
+    if(o.start_date===today)todayO.push(o);
+    else if(o.start_date>today)upcoming.push(o);
+    else past.push(o);
+  });
+  var html='<h1>الأوردرات</h1><p class="sub">'+state.orders.length+' أوردر إجمالي</p>';
+  if(state.orders.length===0){
+    html+='<div class="empty-state"><div class="icon">📭</div><h3>مفيش أوردرات لسه</h3><p>اضغط على "+ أوردر جديد"</p></div>';
+  }else{
+    if(todayO.length){html+='<h2>📌 النهاردة ('+todayO.length+')</h2>';todayO.forEach(function(o){html+=orderCard(o);});}
+    if(upcoming.length){html+='<h2>📅 قادم ('+upcoming.length+')</h2>';upcoming.forEach(function(o){html+=orderCard(o);});}
+    if(past.length){html+='<h2>✅ سابق ('+past.length+')</h2>';past.forEach(function(o){html+=orderCard(o);});}
+  }
+  main.innerHTML=html;
+  main.querySelectorAll('[data-assign]').forEach(function(b){b.onclick=function(){state.assigningOrderId=b.getAttribute('data-assign');state.currentTab='assign';render();};});
+  main.querySelectorAll('[data-del-order]').forEach(function(b){b.onclick=function(){
+    if(!confirm('متأكد تحذف الأوردر؟'))return;
+    state.orders=state.orders.filter(function(o){return o.id!==b.getAttribute('data-del-order');});
+    saveAll();render();toast('تم الحذف','success');
+  };});
+}
+function orderCard(o){
+  var rolesHtml=o.roles.map(function(r){
+    var a=(o.assignments&&o.assignments[r.role])?o.assignments[r.role].length:0;
+    var complete=a>=r.count;
+    return '<div class="role-row'+(complete?' complete':'')+'"><span>'+esc(r.role)+'</span><span>'+a+' / '+r.count+(complete?' ✅':'')+'</span></div>';
+  }).join('');
+  var equipHtml='';
+  if(o.equipment_ids&&o.equipment_ids.length){
+    equipHtml='<div class="meta">🎒 '+o.equipment_ids.map(function(id){var e=getEquip(id);return e?esc(e.name):'?';}).join(' • ')+'</div>';
+  }
+  var travel=o.travel_type==='inside'?'✈️ سفر داخل مصر':o.travel_type==='outside'?'🌍 سفر خارج مصر':'';
+  var workType=o.work_type==='office'?'🏢 مقر':'🌐 خارجي';
+  var dateStr=fmtDate(o.start_date)+(o.open_ended?' (مفتوح)':(o.end_date&&o.end_date!==o.start_date?' → '+fmtDate(o.end_date):''));
+  var issuesHtml=o.issues?'<div class="warn-box">⚠️ مشاكل: '+esc(o.issues)+'</div>':'';
+  return '<div class="item-card '+o.status+'">'+
+    '<div class="item-head"><h3>'+esc(o.client_name||'—')+'</h3><span class="badge '+o.status+'">'+STATUS_LABELS[o.status]+'</span></div>'+
+    '<div class="meta"><span>📅 '+dateStr+'</span><span>'+workType+'</span><span>📍 '+esc(o.location||'—')+'</span>'+(travel?'<span>'+travel+'</span>':'')+'<span>👤 '+esc(o.created_by||'—')+'</span></div>'+
+    rolesHtml+equipHtml+issuesHtml+
+    '<div class="form-actions"><button class="btn btn-primary btn-sm" data-assign="'+o.id+'">✏️ تعيين / تعديل</button><button class="btn btn-danger btn-sm" data-del-order="'+o.id+'">حذف</button></div>'+
+  '</div>';
+}
+
+/* -------- New Order -------- */
+function renderNewOrder(main){
+  if(state.tempRoles.length===0)state.tempRoles=[{role:'مصور',count:1}];
+  var clientOpts='<option value="">— اختار عميل —</option>'+state.clients.map(function(c){return '<option value="'+c.id+'">'+esc(c.name)+'</option>';}).join('');
+  var html='<h1>أوردر جديد</h1><p class="sub">حدد كل التفاصيل</p>'+
+    '<div class="card"><div class="form-grid">'+
+    '<div class="form-group"><label>العميل</label><select id="f-client">'+clientOpts+'</select></div>'+
+    '<div class="form-group"><label>نوع الشغل</label><select id="f-work"><option value="external">خارجي</option><option value="office">مقر</option></select></div>'+
+    '<div class="form-group"><label>من تاريخ</label><input id="f-start" type="date" value="'+todayISO()+'"></div>'+
+    '<div class="form-group"><label>لتاريخ</label><input id="f-end" type="date" value="'+todayISO()+'"></div>'+
+    '<div class="form-group"><label style="flex-direction:row;display:flex;gap:6px;align-items:center"><input id="f-open" type="checkbox"> أيام مفتوحة (بدون نهاية)</label></div>'+
+    '<div class="form-group"><label>السفر</label><select id="f-travel"><option value="none">بدون سفر</option><option value="inside">داخل مصر</option><option value="outside">خارج مصر</option></select></div>'+
+    '<div class="form-group"><label>ساعة الحضور</label><input id="f-time" type="time" value="10:00"></div>'+
+    '<div class="form-group"><label>ساعة التحرك</label><input id="f-depart" type="time" value="09:00"></div>'+
+    '<div class="form-group full"><label>المكان</label><input id="f-loc" type="text" placeholder="مبنى اليوم السابع"></div>'+
+    '</div>'+
+    '<h2 style="margin-top:24px">الأدوار المطلوبة</h2><div id="roles-box"></div>'+
+    '<button type="button" class="btn btn-secondary btn-sm" id="add-role" style="margin-top:10px">+ أضف دور</button>'+
+    '<h2 style="margin-top:24px">المعدات المطلوبة</h2><div id="equip-box"></div>'+
+    '<button type="button" class="btn btn-secondary btn-sm" id="add-equip" style="margin-top:10px">+ أضف معدة</button>'+
+    '<div class="form-actions"><button type="button" class="btn btn-primary" id="save-order">💾 احفظ الأوردر</button>'+
+    '<button type="button" class="btn btn-secondary" id="reset-order">إلغاء</button></div></div>';
+  main.innerHTML=html;
+  renderRoleRows();renderEquipRows();
+  document.getElementById('add-role').onclick=function(){state.tempRoles.push({role:'مصور',count:1});renderRoleRows();};
+  document.getElementById('add-equip').onclick=function(){state.tempEquipment.push({id:''});renderEquipRows();};
+  document.getElementById('reset-order').onclick=function(){state.tempRoles=[{role:'مصور',count:1}];state.tempEquipment=[];renderNewOrder(main);};
+  document.getElementById('save-order').onclick=saveOrder;
+}
+function renderRoleRows(){
+  var c=document.getElementById('roles-box');if(!c)return;
+  c.innerHTML=state.tempRoles.map(function(r,i){
+    return '<div class="role-row" style="background:#fff;border:1px solid var(--border)">'+
+      '<select data-i="'+i+'" data-k="role" style="max-width:160px">'+ROLE_PRESET.map(function(p){return '<option'+(p===r.role?' selected':'')+'>'+p+'</option>';}).join('')+'</select>'+
+      '<input type="number" min="1" value="'+r.count+'" data-i="'+i+'" data-k="count" style="max-width:80px">'+
+      '<button type="button" data-remove="'+i+'" style="background:transparent;border:none;color:var(--danger);font-size:18px;cursor:pointer">×</button>'+
+    '</div>';
+  }).join('');
+  c.querySelectorAll('select,input').forEach(function(el){el.onchange=function(){
+    var i=+el.getAttribute('data-i');var k=el.getAttribute('data-k');
+    state.tempRoles[i][k]=k==='count'?(+el.value||1):el.value;
+  };});
+  c.querySelectorAll('[data-remove]').forEach(function(b){b.onclick=function(){
+    state.tempRoles.splice(+b.getAttribute('data-remove'),1);
+    if(!state.tempRoles.length)state.tempRoles=[{role:'مصور',count:1}];
     renderRoleRows();
-    document.getElementById('add-role').onclick=function(){state.tempRoles.push({role:'مصور',count:1});renderRoleRows();};
-    document.getElementById('reset-order').onclick=function(){state.tempRoles=[{role:'مصور',count:1}];renderNewOrder(main);};
-    document.getElementById('save-order').onclick=saveOrder;
-  }
+  };});
+}
+function renderEquipRows(){
+  var c=document.getElementById('equip-box');if(!c)return;
+  if(!state.equipment.length){c.innerHTML='<p class="sub">مفيش معدات مسجلة. ضيفها من تاب المعدات الأول.</p>';return;}
+  c.innerHTML=state.tempEquipment.map(function(e,i){
+    return '<div class="role-row" style="background:#fff;border:1px solid var(--border)">'+
+      '<select data-ei="'+i+'" style="max-width:100%">'+
+      '<option value="">— اختار معدة —</option>'+
+      state.equipment.map(function(eq){return '<option value="'+eq.id+'"'+(eq.id===e.id?' selected':'')+'>'+esc(eq.name)+' ('+(eq.source==='internal'?'داخلي':'مستأجر')+')</option>';}).join('')+
+      '</select>'+
+      '<button type="button" data-erm="'+i+'" style="background:transparent;border:none;color:var(--danger);font-size:18px;cursor:pointer">×</button>'+
+    '</div>';
+  }).join('');
+  c.querySelectorAll('select').forEach(function(el){el.onchange=function(){
+    state.tempEquipment[+el.getAttribute('data-ei')].id=el.value;
+  };});
+  c.querySelectorAll('[data-erm]').forEach(function(b){b.onclick=function(){
+    state.tempEquipment.splice(+b.getAttribute('data-erm'),1);renderEquipRows();
+  };});
+}
+function saveOrder(){
+  var clientId=document.getElementById('f-client').value;
+  var start=document.getElementById('f-start').value;
+  var end=document.getElementById('f-end').value;
+  var open=document.getElementById('f-open').checked;
+  if(!clientId){toast('اختار عميل','error');return;}
+  if(!start){toast('اختار تاريخ البداية','error');return;}
+  if(!open&&!end){toast('اختار تاريخ النهاية أو فعّل "أيام مفتوحة"','error');return;}
+  var client=getClient(clientId);
+  var order={
+    id:uid('order'),
+    client_id:clientId,
+    client_name:client?client.name:'',
+    work_type:document.getElementById('f-work').value,
+    start_date:start,
+    end_date:open?start:end,
+    open_ended:open,
+    travel_type:document.getElementById('f-travel').value,
+    time:document.getElementById('f-time').value,
+    departure:document.getElementById('f-depart').value,
+    location:document.getElementById('f-loc').value.trim(),
+    roles:state.tempRoles.map(function(r){return {role:r.role,count:+r.count};}),
+    equipment_ids:state.tempEquipment.filter(function(e){return e.id;}).map(function(e){return e.id;}),
+    assignments:{},
+    status:'open',
+    issues:'',
+    created_by:state.currentManager,
+    createdAt:new Date().toISOString()
+  };
+  state.orders.unshift(order);
+  saveAll();
+  toast('تم حفظ الأوردر ✅','success');
+  state.tempRoles=[{role:'مصور',count:1}];state.tempEquipment=[];
+  state.currentTab='orders';render();
+}
 
-  function renderRoleRows(){
-    var c=document.getElementById('roles-container');
-    if(!c)return;
-    var html='';
-    for(var i=0;i<state.tempRoles.length;i++){
-      var r=state.tempRoles[i];
-      var opts='';
-      for(var j=0;j<ROLES_PRESET.length;j++){
-        var p=ROLES_PRESET[j];
-        opts+='<option'+(p===r.role?' selected':'')+'>'+p+'</option>';
-      }
-      html+='<div class="role-row"><select data-i="'+i+'" data-k="role">'+opts+'</select>'+
-        '<input type="number" min="1" value="'+r.count+'" data-i="'+i+'" data-k="count">'+
-        '<button type="button" data-remove="'+i+'">×</button></div>';
-    }
-    c.innerHTML=html;
-    var inputs=c.querySelectorAll('select, input');
-    for(var k=0;k<inputs.length;k++){
-      inputs[k].onchange=function(e){
-        var i=+e.target.getAttribute('data-i');
-        var key=e.target.getAttribute('data-k');
-        state.tempRoles[i][key]=(key==='count')?(+e.target.value||1):e.target.value;
-      };
-    }
-    var removes=c.querySelectorAll('[data-remove]');
-    for(var m=0;m<removes.length;m++){
-      removes[m].onclick=function(e){
-        var i=+e.target.getAttribute('data-remove');
-        state.tempRoles.splice(i,1);
-        if(state.tempRoles.length===0)state.tempRoles=[{role:'مصور',count:1}];
-        renderRoleRows();
-      };
-    }
-  }
+/* -------- Assign Screen -------- */
+function renderAssign(main){
+  var order=getOrder(state.assigningOrderId);
+  if(!order){state.currentTab='orders';render();return;}
+  var html='<div class="item-head"><div><h1>تعيين: '+esc(order.client_name)+'</h1>'+
+    '<p class="sub">'+fmtDate(order.start_date)+(order.open_ended?' (مفتوح)':(order.end_date&&order.end_date!==order.start_date?' → '+fmtDate(order.end_date):''))+' • '+esc(order.location||'—')+'</p></div>'+
+    '<button class="btn btn-secondary btn-sm" id="back-btn">← رجوع</button></div>';
 
-  function saveOrder(){
-    var client=document.getElementById('f-client').value.trim();
-    var date=document.getElementById('f-date').value;
-    var time=document.getElementById('f-time').value;
-    var departure=document.getElementById('f-departure').value;
-    var location=document.getElementById('f-location').value.trim();
-    if(!client){toast('اكتب اسم العميل','error');return;}
-    if(!date){toast('اختار التاريخ','error');return;}
-    var roles=[];
-    for(var i=0;i<state.tempRoles.length;i++){
-      roles.push({role:state.tempRoles[i].role,count:+state.tempRoles[i].count});
-    }
-    var order={id:uid('order'),client:client,date:date,time:time,departure:departure,location:location,roles:roles,assignments:{},status:'open',createdAt:new Date().toISOString()};
-    state.orders.unshift(order);
-    saveOrders();
-    toast('تم حفظ الأوردر ✅','success');
-    state.tempRoles=[{role:'مصور',count:1}];
-    state.currentTab='today';
-    render();
-  }
+  /* Status controls */
+  html+='<div class="card"><h2 style="margin-top:0">حالة الأوردر</h2><div class="form-actions">'+
+    '<select id="status-sel" style="max-width:200px">'+
+    Object.keys(STATUS_LABELS).map(function(s){return '<option value="'+s+'"'+(order.status===s?' selected':'')+'>'+STATUS_LABELS[s]+'</option>';}).join('')+
+    '</select>'+
+    '<input id="issues-input" type="text" placeholder="ملاحظات المشاكل (لو خلص بمشاكل)" value="'+esc(order.issues||'')+'" style="flex:1;min-width:200px">'+
+    '<button class="btn btn-primary btn-sm" id="save-status">حفظ</button>'+
+    '</div></div>';
 
-  function renderToday(main){
-    var today=todayISO();
-    var todays=[];
-    for(var i=0;i<state.orders.length;i++){
-      if(state.orders[i].date===today)todays.push(state.orders[i]);
-    }
-    var html='<div class="page-header"><h1>أوردرات اليوم</h1><p>'+todays.length+' أوردر</p></div>';
-    if(todays.length===0){
-      html+='<div class="empty-state"><div class="icon">📭</div><h3>مفيش أوردرات النهاردة</h3><p>اضغط على "+ أوردر جديد".</p></div>';
-    }else{
-      for(var j=0;j<todays.length;j++)html+=renderOrderCard(todays[j]);
-    }
-    main.innerHTML=html;
-    var delBtns=main.querySelectorAll('[data-del-order]');
-    for(var k=0;k<delBtns.length;k++){
-      delBtns[k].onclick=function(e){
-        var id=e.target.getAttribute('data-del-order');
-        if(!confirm('متأكد تحذف الأوردر ده؟'))return;
-        var remaining=[];
-        for(var x=0;x<state.orders.length;x++){
-          if(state.orders[x].id!==id)remaining.push(state.orders[x]);
+  /* Roles */
+  for(var i=0;i<order.roles.length;i++){
+    var r=order.roles[i];
+    var assignedIds=order.assignments[r.role]||[];
+    var complete=assignedIds.length>=r.count;
+    html+='<div class="card"><div class="item-head"><h2 style="margin:0">'+esc(r.role)+' <span class="badge '+(complete?'assigned':'open')+'">'+assignedIds.length+' / '+r.count+'</span></h2></div>';
+    if(assignedIds.length){
+      html+='<div class="assigned-list">';
+      assignedIds.forEach(function(pid){
+        var p=getPerson(pid);if(!p)return;
+        var conf=getPersonConflicts(pid,order.id);
+        var confHtml='';
+        if(conf.length){
+          confHtml='<span class="conflict">⚠️ '+'</span>';
         }
-        state.orders=remaining;
-        saveOrders();
-        render();
-        toast('تم الحذف','success');
-      };
+        html+='<div class="assigned-person"><span>'+confHtml+'👤 '+esc(p.name)+' <span class="badge '+p.type+'">'+personTypeLabel(p.type)+'</span></span>'+
+          '<button data-rm-p="'+pid+'" data-rm-r="'+esc(r.role)+'" style="background:transparent;border:none;color:var(--danger);cursor:pointer;font-size:16px">×</button></div>';
+      });
+      html+='</div>';
     }
-  }
-
-  function renderOrderCard(o){
-    var rolesHtml='';
-    for(var i=0;i<o.roles.length;i++){
-      var r=o.roles[i];
-      var assigned=(o.assignments&&o.assignments[r.role])?o.assignments[r.role].length:0;
-      var complete=assigned>=r.count;
-      rolesHtml+='<div class="role-status'+(complete?' complete':'')+'">'+
-        '<span class="role-name">'+esc(r.role)+'</span>'+
-        '<span class="role-count">'+assigned+' / '+r.count+'</span></div>';
-    }
-    return '<div class="order-card"><h3>'+esc(o.client)+'</h3>'+
-      '<div class="order-meta"><span>📅 '+esc(o.date)+'</span>'+
-      '<span>🕐 حضور '+esc(o.time)+'</span>'+
-      '<span>🚗 تحرك '+esc(o.departure)+'</span>'+
-      '<span>📍 '+esc(o.location||'—')+'</span></div>'+
-      '<div class="roles-status">'+rolesHtml+'</div>'+
-      '<div class="form-actions"><button class="btn btn-secondary btn-sm">+ عيّن الفريق (قريباً)</button>'+
-      '<button class="btn btn-danger btn-sm" data-del-order="'+o.id+'">حذف</button></div></div>';
-  }
-
-  function renderTeam(main){
-    var html='<div class="page-header"><h1>الفريق</h1><p>'+state.people.length+' شخص مسجل</p></div>'+
-      '<div class="card"><h3 style="margin-bottom:16px">أضف شخص جديد</h3>'+
-      '<div class="form-grid">'+
-      '<div class="form-group"><label>الاسم</label><input id="p-name" type="text" placeholder="أحمد سعيد"></div>'+
-      '<div class="form-group"><label>الموبايل</label><input id="p-phone" type="tel" placeholder="01xxxxxxxxx"></div>'+
-      '<div class="form-group"><label>النوع</label><select id="p-type"><option value="employee">موظف</option><option value="freelancer">فريلانسر</option></select></div>'+
-      '<div class="form-group"><label>المهارات</label><input id="p-skills" type="text" placeholder="مصور, صوت, فني"></div>'+
-      '</div><div class="form-actions"><button class="btn btn-primary" id="save-person">أضف</button></div></div>';
-    if(state.people.length===0){
-      html+='<div class="empty-state"><div class="icon">👥</div><h3>مفيش حد مسجل لسه</h3><p>ضيف أول موظف أو فريلانسر.</p></div>';
-    }else{
-      for(var i=0;i<state.people.length;i++){
-        var p=state.people[i];
-        html+='<div class="person-card"><div class="person-info">'+
-          '<h4>'+esc(p.name)+' <span class="badge '+p.type+'">'+(p.type==='employee'?'موظف':'فريلانسر')+'</span></h4>'+
-          '<p>📱 '+esc(p.phone||'—')+' • 🛠️ '+esc(p.skills||'—')+'</p></div>'+
-          '<button class="btn btn-danger btn-sm" data-del-person="'+p.id+'">حذف</button></div>';
+    if(!complete){
+      var eligible=getEligible(order.id,r.role);
+      if(!eligible.length){
+        html+='<p class="sub">مفيش أشخاص متاحين. ضيفهم من تاب الفريق.</p>';
+      }else{
+        html+='<div style="display:flex;gap:8px;margin-top:8px"><select data-role-sel="'+i+'" style="flex:1">'+
+          '<option value="">— اختار شخص —</option>'+
+          eligible.map(function(e){
+            var tag='';
+            if(e.conflicts.length)tag=' ⚠️ متعارض';
+            else if(e.onVacation)tag=' 🏖️ إجازة';
+            else if(e.matchesSkill)tag=' ✅';
+            return '<option value="'+e.person.id+'">'+esc(e.person.name)+' ('+personTypeLabel(e.person.type)+tag+')</option>';
+          }).join('')+
+          '</select>'+
+          '<button class="btn btn-primary btn-sm" data-add-role="'+esc(r.role)+'" data-role-sel-idx="'+i+'">+ أضف</button></div>';
       }
     }
-    main.innerHTML=html;
-    document.getElementById('save-person').onclick=savePerson;
-    var delBtns=main.querySelectorAll('[data-del-person]');
-    for(var k=0;k<delBtns.length;k++){
-      delBtns[k].onclick=function(e){
-        var id=e.target.getAttribute('data-del-person');
-        if(!confirm('متأكد تحذف الشخص ده؟'))return;
-        var remaining=[];
-        for(var x=0;x<state.people.length;x++){
-          if(state.people[x].id!==id)remaining.push(state.people[x]);
-        }
-        state.people=remaining;
-        savePeople();
-        render();
-        toast('تم الحذف','success');
-      };
-    }
+    html+='</div>';
   }
 
-  function savePerson(){
+  /* Equipment */
+  html+='<div class="card"><h2 style="margin-top:0">المعدات</h2>';
+  if(!order.equipment_ids||!order.equipment_ids.length){
+    html+='<p class="sub">مفيش معدات مطلوبة.</p>';
+  }else{
+    html+='<div class="assigned-list">'+order.equipment_ids.map(function(eid){
+      var e=getEquip(eid);if(!e)return '';
+      var conf=getEquipConflicts(eid,order.id);
+      return '<div class="assigned-person"><span>'+(conf.length?'⚠️ ':'')+'🎒 '+esc(e.name)+' <span class="badge '+e.source+'">'+(e.source==='internal'?'داخلي':'مستأجر')+'</span></span></div>';
+    }).join('')+'</div>';
+  }
+  html+='</div>';
+
+  main.innerHTML=html;
+
+  document.getElementById('back-btn').onclick=function(){state.currentTab='orders';state.assigningOrderId=null;render();};
+  document.getElementById('save-status').onclick=function(){
+    order.status=document.getElementById('status-sel').value;
+    order.issues=document.getElementById('issues-input').value.trim();
+    saveAll();toast('تم الحفظ','success');render();
+  };
+  main.querySelectorAll('[data-add-role]').forEach(function(b){b.onclick=function(){
+    var idx=+b.getAttribute('data-role-sel-idx');
+    var sel=main.querySelector('[data-role-sel="'+idx+'"]');
+    if(!sel.value){toast('اختار شخص','error');return;}
+    addPersonToRole(order.id,b.getAttribute('data-add-role'),sel.value);
+  };});
+  main.querySelectorAll('[data-rm-p]').forEach(function(b){b.onclick=function(){
+    var pid=b.getAttribute('data-rm-p');var role=b.getAttribute('data-rm-r');
+    order.assignments[role]=order.assignments[role].filter(function(x){return x!==pid;});
+    saveAll();render();
+  };});
+}
+function getEligible(orderId,role){
+  var order=getOrder(orderId);if(!order)return [];
+  var assignedIds=[];
+  for(var r in order.assignments)assignedIds=assignedIds.concat(order.assignments[r]);
+  return state.people
+    .filter(function(p){return assignedIds.indexOf(p.id)===-1;})
+    .map(function(p){
+      var skills=(p.skills||'').split(',').map(function(s){return s.trim();}).filter(Boolean);
+      return {
+        person:p,
+        matchesSkill:skills.indexOf(role)!==-1,
+        conflicts:getPersonConflicts(p.id,orderId).filter(function(c){return c.type==='order';}),
+        onVacation:getPersonConflicts(p.id,orderId).some(function(c){return c.type==='vacation';})
+      };
+    })
+    .sort(function(a,b){
+      if(a.conflicts.length&&!b.conflicts.length)return 1;
+      if(!a.conflicts.length&&b.conflicts.length)return -1;
+      if(a.onVacation&&!b.onVacation)return 1;
+      if(!a.onVacation&&b.onVacation)return -1;
+      if(b.matchesSkill!==a.matchesSkill)return b.matchesSkill?1:-1;
+      return 0;
+    });
+}
+function addPersonToRole(orderId,role,personId){
+  var order=getOrder(orderId);if(!order)return;
+  if(!order.assignments[role])order.assignments[role]=[];
+  var r=null;for(var i=0;i<order.roles.length;i++)if(order.roles[i].role===role)r=order.roles[i];
+  if(!r)return;
+  if(order.assignments[role].length>=r.count){toast('الدور مكتمل','error');return;}
+  var conflicts=getPersonConflicts(personId,orderId);
+  if(conflicts.length){
+    var ok=confirm('⚠️ في تضارب:\n'+conflicts.map(function(c){
+      return c.type==='order'?('معين في أوردر: '+c.order.client_name+' ('+fmtDate(c.order.start_date)+')'):('في إجازة: '+fmtDate(c.unavailability.from_date)+' → '+fmtDate(c.unavailability.to_date));
+    }).join('\n')+'\n\nتكمل التعيين؟');
+    if(!ok)return;
+  }
+  order.assignments[role].push(personId);
+  /* Auto-status */
+  if(order.status==='open')order.status='assigned';
+  var allFull=true;
+  for(var j=0;j<order.roles.length;j++){
+    var rr=order.roles[j];
+    if((order.assignments[rr.role]||[]).length<rr.count){allFull=false;break;}
+  }
+  if(allFull)order.status='assigned';
+  saveAll();render();toast('تم التعيين','success');
+}
+function personTypeLabel(t){return t==='employee'?'موظف':t==='freelancer'?'فريلانسر':t==='driver'?'سائق':'—';}
+
+/* -------- Team -------- */
+function renderTeam(main){
+  var html='<h1>الفريق</h1><p class="sub">'+state.people.length+' شخص</p>';
+  html+='<div class="sub-tabs">'+
+    '<button data-tf="all" class="'+(state.teamFilter==='all'?'active':'')+'">الكل</button>'+
+    '<button data-tf="employee" class="'+(state.teamFilter==='employee'?'active':'')+'">موظفين</button>'+
+    '<button data-tf="freelancer" class="'+(state.teamFilter==='freelancer'?'active':'')+'">فريلانسرز</button>'+
+    '<button data-tf="driver" class="'+(state.teamFilter==='driver'?'active':'')+'">سواقين</button>'+
+  '</div>';
+  html+='<div class="card"><h2 style="margin-top:0">أضف شخص</h2><div class="form-grid">'+
+    '<div class="form-group"><label>الاسم</label><input id="p-name" placeholder="أحمد سعيد"></div>'+
+    '<div class="form-group"><label>الموبايل</label><input id="p-phone" placeholder="01xxxxxxxxx"></div>'+
+    '<div class="form-group"><label>النوع</label><select id="p-type"><option value="employee">موظف</option><option value="freelancer">فريلانسر</option><option value="driver">سائق</option></select></div>'+
+    '<div class="form-group"><label>المهارات (فاصلة)</label><input id="p-skills" placeholder="مصور, صوت, فني"></div>'+
+    '<div class="form-group"><label>المنطقة</label><input id="p-area" placeholder="المعادي"></div>'+
+    '<div class="form-group full"><label>ملاحظات</label><input id="p-notes" placeholder="أي ملاحظات"></div>'+
+    '</div><div class="form-actions"><button class="btn btn-primary" id="save-person">أضف</button></div></div>';
+
+  var filtered=state.people.filter(function(p){return state.teamFilter==='all'||p.type===state.teamFilter;});
+  if(!filtered.length){
+    html+='<div class="empty-state"><div class="icon">👥</div><h3>مفيش أشخاص</h3></div>';
+  }else{
+    filtered.forEach(function(p){
+      var vacations=state.unavailability.filter(function(u){return u.person_id===p.id&&u.to_date>=todayISO();});
+      var vacHtml=vacations.length?' <span class="badge done_issues">🏖️ '+vacations.length+' إجازة</span>':'';
+      html+='<div class="person-card"><div><h4 style="font-size:15px">'+esc(p.name)+' <span class="badge '+p.type+'">'+personTypeLabel(p.type)+'</span>'+vacHtml+'</h4>'+
+        '<p style="font-size:12px;color:var(--muted)">📱 '+esc(p.phone||'—')+' • 🛠️ '+esc(p.skills||'—')+' • 📍 '+esc(p.area||'—')+'</p></div>'+
+        '<button class="btn btn-danger btn-sm" data-del-p="'+p.id+'">حذف</button></div>';
+    });
+  }
+  main.innerHTML=html;
+  main.querySelectorAll('[data-tf]').forEach(function(b){b.onclick=function(){state.teamFilter=b.getAttribute('data-tf');render();};});
+  document.getElementById('save-person').onclick=function(){
     var name=document.getElementById('p-name').value.trim();
-    var phone=document.getElementById('p-phone').value.trim();
-    var type=document.getElementById('p-type').value;
-    var skills=document.getElementById('p-skills').value.trim();
     if(!name){toast('اكتب الاسم','error');return;}
-    state.people.unshift({id:uid('person'),name:name,phone:phone,type:type,skills:skills,createdAt:new Date().toISOString()});
-    savePeople();
-    toast('تم إضافة '+name,'success');
-    render();
-  }
+    state.people.unshift({
+      id:uid('person'),name:name,
+      phone:document.getElementById('p-phone').value.trim(),
+      type:document.getElementById('p-type').value,
+      skills:document.getElementById('p-skills').value.trim(),
+      area:document.getElementById('p-area').value.trim(),
+      notes:document.getElementById('p-notes').value.trim(),
+      createdAt:new Date().toISOString()
+    });
+    saveAll();toast('تم إضافة '+name,'success');render();
+  };
+  main.querySelectorAll('[data-del-p]').forEach(function(b){b.onclick=function(){
+    if(!confirm('متأكد؟'))return;
+    var id=b.getAttribute('data-del-p');
+    state.people=state.people.filter(function(p){return p.id!==id;});
+    state.unavailability=state.unavailability.filter(function(u){return u.person_id!==id;});
+    saveAll();render();
+  };});
+}
 
-  function init(){
-    loadData();
-    var tabs=document.querySelectorAll('.tabs button');
-    for(var i=0;i<tabs.length;i++){
-      tabs[i].onclick=function(e){
-        state.currentTab=e.target.getAttribute('data-tab');
-        render();
-      };
-    }
-    render();
+/* -------- Clients -------- */
+function renderClients(main){
+  var html='<h1>العملاء</h1><p class="sub">'+state.clients.length+' عميل</p>';
+  html+='<div class="card"><h2 style="margin-top:0">أضف عميل</h2><div class="form-grid">'+
+    '<div class="form-group"><label>اسم العميل</label><input id="c-name" placeholder="Kora Plus"></div>'+
+    '<div class="form-group"><label>الشخص المسؤول</label><input id="c-contact" placeholder="م. أحمد"></div>'+
+    '<div class="form-group"><label>الموبايل</label><input id="c-phone" placeholder="01xxxxxxxxx"></div>'+
+    '<div class="form-group full"><label>ملاحظات</label><input id="c-notes"></div>'+
+    '</div><div class="form-actions"><button class="btn btn-primary" id="save-client">أضف</button></div></div>';
+  if(state.clients.length){
+    state.clients.forEach(function(c){
+      html+='<div class="person-card"><div><h4 style="font-size:15px">'+esc(c.name)+'</h4>'+
+        '<p style="font-size:12px;color:var(--muted)">👤 '+esc(c.contact||'—')+' • 📱 '+esc(c.phone||'—')+'</p></div>'+
+        '<button class="btn btn-danger btn-sm" data-del-c="'+c.id+'">حذف</button></div>';
+    });
   }
+  main.innerHTML=html;
+  document.getElementById('save-client').onclick=function(){
+    var name=document.getElementById('c-name').value.trim();
+    if(!name){toast('اكتب الاسم','error');return;}
+    state.clients.unshift({
+      id:uid('client'),name:name,
+      contact:document.getElementById('c-contact').value.trim(),
+      phone:document.getElementById('c-phone').value.trim(),
+      notes:document.getElementById('c-notes').value.trim()
+    });
+    saveAll();toast('تم','success');render();
+  };
+  main.querySelectorAll('[data-del-c]').forEach(function(b){b.onclick=function(){
+    if(!confirm('متأكد؟'))return;
+    state.clients=state.clients.filter(function(c){return c.id!==b.getAttribute('data-del-c');});
+    saveAll();render();
+  };});
+}
 
-  if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',init);}
-  else{init();}
+/* -------- Equipment -------- */
+function renderEquipment(main){
+  var html='<h1>المعدات</h1><p class="sub">'+state.equipment.length+' معدة</p>';
+  html+='<div class="card"><h2 style="margin-top:0">أضف معدة</h2><div class="form-grid">'+
+    '<div class="form-group"><label>الاسم</label><input id="e-name" placeholder="Camera 5D Mark IV"></div>'+
+    '<div class="form-group"><label>التصنيف</label><select id="e-cat">'+EQUIP_CATEGORIES.map(function(c){return '<option>'+c+'</option>';}).join('')+'</select></div>'+
+    '<div class="form-group"><label>المصدر</label><select id="e-source"><option value="internal">داخلي</option><option value="rented">مستأجر</option></select></div>'+
+    '<div class="form-group"><label>المورد (لو مستأجر)</label><input id="e-supplier"></div>'+
+    '</div><div class="form-actions"><button class="btn btn-primary" id="save-equip">أضف</button></div></div>';
+  if(state.equipment.length){
+    state.equipment.forEach(function(e){
+      html+='<div class="person-card"><div><h4 style="font-size:15px">'+esc(e.name)+' <span class="badge '+e.source+'">'+(e.source==='internal'?'داخلي':'مستأجر')+'</span></h4>'+
+        '<p style="font-size:12px;color:var(--muted)">🏷️ '+esc(e.category||'—')+(e.supplier?' • 🏢 '+esc(e.supplier):'')+'</p></div>'+
+        '<button class="btn btn-danger btn-sm" data-del-e="'+e.id+'">حذف</button></div>';
+    });
+  }
+  main.innerHTML=html;
+  document.getElementById('save-equip').onclick=function(){
+    var name=document.getElementById('e-name').value.trim();
+    if(!name){toast('اكتب الاسم','error');return;}
+    state.equipment.unshift({
+      id:uid('equip'),name:name,
+      category:document.getElementById('e-cat').value,
+      source:document.getElementById('e-source').value,
+      supplier:document.getElementById('e-supplier').value.trim()
+    });
+    saveAll();toast('تم','success');render();
+  };
+  main.querySelectorAll('[data-del-e]').forEach(function(b){b.onclick=function(){
+    if(!confirm('متأكد؟'))return;
+    state.equipment=state.equipment.filter(function(e){return e.id!==b.getAttribute('data-del-e');});
+    saveAll();render();
+  };});
+}
+
+/* -------- Vacations / Unavailability -------- */
+function renderVacations(main){
+  var html='<h1>الإجازات / عدم التوفر</h1><p class="sub">'+state.unavailability.length+' سجل</p>';
+  html+='<div class="card"><h2 style="margin-top:0">أضف سجل</h2><div class="form-grid">'+
+    '<div class="form-group"><label>الشخص</label><select id="u-person"><option value="">— اختار —</option>'+state.people.map(function(p){return '<option value="'+p.id+'">'+esc(p.name)+' ('+personTypeLabel(p.type)+')</option>';}).join('')+'</select></div>'+
+    '<div class="form-group"><label>من تاريخ</label><input id="u-from" type="date" value="'+todayISO()+'"></div>'+
+    '<div class="form-group"><label>لتاريخ</label><input id="u-to" type="date" value="'+todayISO()+'"></div>'+
+    '<div class="form-group full"><label>السبب</label><input id="u-reason" placeholder="إجازة سنوية / مرض / مهمة"></div>'+
+    '</div><div class="form-actions"><button class="btn btn-primary" id="save-unav">أضف</button></div></div>';
+  if(state.unavailability.length){
+    var sorted=state.unavailability.slice().sort(function(a,b){return b.from_date.localeCompare(a.from_date);});
+    sorted.forEach(function(u){
+      var p=getPerson(u.person_id);
+      if(!p)return;
+      html+='<div class="person-card"><div><h4 style="font-size:14px">'+esc(p.name)+'</h4>'+
+        '<p style="font-size:12px;color:var(--muted)">📅 '+fmtDate(u.from_date)+' → '+fmtDate(u.to_date)+' • '+esc(u.reason||'—')+'</p></div>'+
+        '<button class="btn btn-danger btn-sm" data-del-u="'+u.id+'">حذف</button></div>';
+    });
+  }
+  main.innerHTML=html;
+  document.getElementById('save-unav').onclick=function(){
+    var pid=document.getElementById('u-person').value;
+    if(!pid){toast('اختار شخص','error');return;}
+    var from=document.getElementById('u-from').value;
+    var to=document.getElementById('u-to').value;
+    if(!from||!to){toast('اختار التواريخ','error');return;}
+    state.unavailability.push({
+      id:uid('unav'),person_id:pid,
+      from_date:from,to_date:to,
+      reason:document.getElementById('u-reason').value.trim()
+    });
+    saveAll();toast('تم','success');render();
+  };
+  main.querySelectorAll('[data-del-u]').forEach(function(b){b.onclick=function(){
+    if(!confirm('متأكد؟'))return;
+    state.unavailability=state.unavailability.filter(function(u){return u.id!==b.getAttribute('data-del-u');});
+    saveAll();render();
+  };});
+}
+
+/* ============================================================
+   Init
+   ============================================================ */
+function init(){
+  loadAll();
+  var sel=document.getElementById('manager-select');
+  sel.innerHTML=state.managers.map(function(m){return '<option'+(m===state.currentManager?' selected':'')+'>'+m+'</option>';}).join('');
+  sel.onchange=function(){state.currentManager=sel.value;setLS(KEYS.currentManager,state.currentManager);};
+  document.querySelectorAll('#main-tabs button').forEach(function(b){
+    b.onclick=function(){state.currentTab=b.getAttribute('data-tab');state.assigningOrderId=null;render();};
+  });
+  render();
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
 </script>
 </body>
