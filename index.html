@@ -5,13 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CrewFlow — نظام توزيع الأطقم</title>
 <style>
-:root{--bg:#f5f7fb;--card:#fff;--border:#e3e7ef;--text:#1a2233;--muted:#6b7690;--primary:#2563eb;--primary-dark:#1d4ed8;--success:#16a34a;--warning:#d97706;--danger:#dc2626;--radius:12px}
+:root{--bg:#f5f7fb;--card:#fff;--border:#e3e7ef;--text:#1a2233;--muted:#6b7690;--primary:#2563eb;--primary-dark:#1d4ed8;--success:#16a34a;--danger:#dc2626;--radius:12px}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,"Segoe UI",Tahoma,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;line-height:1.6}
 .topbar{background:var(--card);border-bottom:1px solid var(--border);padding:16px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;position:sticky;top:0;z-index:10;flex-wrap:wrap}
 .brand{font-size:20px;font-weight:700;color:var(--primary)}
 .tabs{display:flex;gap:8px;flex-wrap:wrap}
-.tabs button{background:transparent;border:1px solid var(--border);padding:8px 16px;border-radius:999px;cursor:pointer;font-size:14px;color:var(--muted);transition:all .15s;font-family:inherit}
+.tabs button{background:transparent;border:1px solid var(--border);padding:8px 16px;border-radius:999px;cursor:pointer;font-size:14px;color:var(--muted);font-family:inherit}
 .tabs button:hover{background:#eef2fb}
 .tabs button.active{background:var(--primary);color:#fff;border-color:var(--primary)}
 main{max-width:960px;margin:0 auto;padding:24px}
@@ -26,7 +26,7 @@ label{font-size:13px;font-weight:600;color:var(--muted)}
 input,textarea,select{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:15px;font-family:inherit;background:#fff;color:var(--text)}
 input:focus,textarea:focus,select:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
 textarea{resize:vertical;min-height:80px}
-.btn{padding:10px 20px;border-radius:8px;border:none;font-size:15px;font-weight:600;cursor:pointer;transition:all .15s;font-family:inherit}
+.btn{padding:10px 20px;border-radius:8px;border:none;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit}
 .btn-primary{background:var(--primary);color:#fff}
 .btn-primary:hover{background:var(--primary-dark)}
 .btn-secondary{background:#eef2fb;color:var(--primary)}
@@ -54,7 +54,7 @@ textarea{resize:vertical;min-height:80px}
 .badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600}
 .badge.employee{background:#dbeafe;color:#1e40af}
 .badge.freelancer{background:#fef3c7;color:#92400e}
-.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:#1a2233;color:#fff;padding:12px 24px;border-radius:8px;font-size:14px;transition:transform .3s;z-index:100;max-width:90vw}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:#1a2233;color:#fff;padding:12px 24px;border-radius:8px;font-size:14px;transition:transform .3s;z-index:100}
 .toast.show{transform:translateX(-50%) translateY(0)}
 .toast.success{background:var(--success)}
 .toast.error{background:var(--danger)}
@@ -78,317 +78,223 @@ textarea{resize:vertical;min-height:80px}
 <script>
 (function(){
   'use strict';
-
-  var STORAGE_KEYS = { orders: 'crewflow_orders', people: 'crewflow_people' };
-  var ROLES_PRESET = ['مصور','صوت','فني','فني سويتشر','مراسل','سائق','عربية','منتج'];
-
-  var state = {
-    currentTab: 'new-order',
-    tempRoles: [{ role: 'مصور', count: 1 }],
-    orders: [],
-    people: []
-  };
+  var STORAGE_KEYS={orders:'crewflow_orders',people:'crewflow_people'};
+  var ROLES_PRESET=['مصور','صوت','فني','فني سويتشر','مراسل','سائق','عربية','منتج'];
+  var state={currentTab:'new-order',tempRoles:[{role:'مصور',count:1}],orders:[],people:[]};
 
   function loadData(){
-    try { state.orders = JSON.parse(localStorage.getItem(STORAGE_KEYS.orders) || '[]'); } catch(e){ state.orders = []; }
-    try { state.people = JSON.parse(localStorage.getItem(STORAGE_KEYS.people) || '[]'); } catch(e){ state.people = []; }
+    try{state.orders=JSON.parse(localStorage.getItem(STORAGE_KEYS.orders)||'[]');}catch(e){state.orders=[];}
+    try{state.people=JSON.parse(localStorage.getItem(STORAGE_KEYS.people)||'[]');}catch(e){state.people=[];}
   }
-
-  function saveOrders(){ localStorage.setItem(STORAGE_KEYS.orders, JSON.stringify(state.orders)); }
-  function savePeople(){ localStorage.setItem(STORAGE_KEYS.people, JSON.stringify(state.people)); }
-
-  function uid(p){ return (p||'id') + '_' + Date.now() + '_' + Math.random().toString(36).slice(2,8); }
-
-  function esc(v){
-    return String(v==null?'':v)
-      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-      .replace(/"/g,'&quot;').replace(/'/g,'&#039;');
-  }
-
-  function todayISO(){
-    var d = new Date();
-    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
-  }
-
-  function toast(msg, type){
-    var el = document.getElementById('toast');
-    el.textContent = msg;
-    el.className = 'toast show ' + (type || '');
-    clearTimeout(el._t);
-    el._t = setTimeout(function(){ el.className = 'toast ' + (type||''); }, 2500);
-  }
+  function saveOrders(){localStorage.setItem(STORAGE_KEYS.orders,JSON.stringify(state.orders));}
+  function savePeople(){localStorage.setItem(STORAGE_KEYS.people,JSON.stringify(state.people));}
+  function uid(p){return (p||'id')+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,8);}
+  function esc(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');}
+  function todayISO(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+  function toast(msg,type){var el=document.getElementById('toast');el.textContent=msg;el.className='toast show '+(type||'');clearTimeout(el._t);el._t=setTimeout(function(){el.className='toast '+(type||'');},2500);}
 
   function render(){
-    var btns = document.querySelectorAll('.tabs button');
+    var btns=document.querySelectorAll('.tabs button');
     for(var i=0;i<btns.length;i++){
-      if(btns[i].getAttribute('data-tab') === state.currentTab) btns[i].classList.add('active');
+      if(btns[i].getAttribute('data-tab')===state.currentTab)btns[i].classList.add('active');
       else btns[i].classList.remove('active');
     }
-    var main = document.getElementById('main');
-    main.innerHTML = '';
-    if(state.currentTab === 'new-order') renderNewOrder(main);
-    else if(state.currentTab === 'today') renderToday(main);
-    else if(state.currentTab === 'team') renderTeam(main);
+    var main=document.getElementById('main');
+    main.innerHTML='';
+    if(state.currentTab==='new-order')renderNewOrder(main);
+    else if(state.currentTab==='today')renderToday(main);
+    else if(state.currentTab==='team')renderTeam(main);
   }
 
-  /* -------- Screen 1 -------- */
   function renderNewOrder(main){
-    main.innerHTML =
-      '<div class="page-header"><h1>أوردر جديد</h1><p>حدد العميل، الوقت، المكان، والأدوار.</p></div>' +
-      '<div class="card">' +
-        '<div class="form-grid">' +
-          '<div class="form-group"><label>العميل</label><input id="f-client" type="text" placeholder="Kora Plus"></div>' +
-          '<div class="form-group"><label>التاريخ</label><input id="f-date" type="date" value="' + todayISO() + '"></div>' +
-          '<div class="form-group"><label>ساعة الحضور</label><input id="f-time" type="time" value="10:00"></div>' +
-          '<div class="form-group"><label>ساعة التحرك</label><input id="f-departure" type="time" value="09:00"></div>' +
-          '<div class="form-group full"><label>المكان</label><input id="f-location" type="text" placeholder="مبنى اليوم السابع"></div>' +
-        '</div>' +
-        '<div style="margin-top:24px"><label>الأدوار المطلوبة</label><div id="roles-container" class="roles-list"></div>' +
-        '<button type="button" class="btn btn-secondary btn-sm" id="add-role" style="margin-top:12px">+ أضف دور</button></div>' +
-        '<div class="form-actions">' +
-          '<button type="button" class="btn btn-primary" id="save-order">احفظ الأوردر</button>' +
-          '<button type="button" class="btn btn-secondary" id="reset-order">إلغاء</button>' +
-        '</div>' +
-      '</div>';
-
+    main.innerHTML='<div class="page-header"><h1>أوردر جديد</h1><p>حدد العميل، الوقت، المكان، والأدوار.</p></div>'+
+      '<div class="card"><div class="form-grid">'+
+      '<div class="form-group"><label>العميل</label><input id="f-client" type="text" placeholder="Kora Plus"></div>'+
+      '<div class="form-group"><label>التاريخ</label><input id="f-date" type="date" value="'+todayISO()+'"></div>'+
+      '<div class="form-group"><label>ساعة الحضور</label><input id="f-time" type="time" value="10:00"></div>'+
+      '<div class="form-group"><label>ساعة التحرك</label><input id="f-departure" type="time" value="09:00"></div>'+
+      '<div class="form-group full"><label>المكان</label><input id="f-location" type="text" placeholder="مبنى اليوم السابع"></div>'+
+      '</div><div style="margin-top:24px"><label>الأدوار المطلوبة</label><div id="roles-container" class="roles-list"></div>'+
+      '<button type="button" class="btn btn-secondary btn-sm" id="add-role" style="margin-top:12px">+ أضف دور</button></div>'+
+      '<div class="form-actions"><button type="button" class="btn btn-primary" id="save-order">احفظ الأوردر</button>'+
+      '<button type="button" class="btn btn-secondary" id="reset-order">إلغاء</button></div></div>';
     renderRoleRows();
-
-    document.getElementById('add-role').onclick = function(){
-      state.tempRoles.push({ role: 'مصور', count: 1 });
-      renderRoleRows();
-    };
-
-    document.getElementById('reset-order').onclick = function(){
-      state.tempRoles = [{ role: 'مصور', count: 1 }];
-      renderNewOrder(main);
-    };
-
-    document.getElementById('save-order').onclick = saveOrder;
+    document.getElementById('add-role').onclick=function(){state.tempRoles.push({role:'مصور',count:1});renderRoleRows();};
+    document.getElementById('reset-order').onclick=function(){state.tempRoles=[{role:'مصور',count:1}];renderNewOrder(main);};
+    document.getElementById('save-order').onclick=saveOrder;
   }
 
   function renderRoleRows(){
-    var c = document.getElementById('roles-container');
-    if(!c) return;
-    var html = '';
+    var c=document.getElementById('roles-container');
+    if(!c)return;
+    var html='';
     for(var i=0;i<state.tempRoles.length;i++){
-      var r = state.tempRoles[i];
-      var opts = '';
+      var r=state.tempRoles[i];
+      var opts='';
       for(var j=0;j<ROLES_PRESET.length;j++){
-        var p = ROLES_PRESET[j];
-        opts += '<option' + (p===r.role?' selected':'') + '>' + p + '</option>';
+        var p=ROLES_PRESET[j];
+        opts+='<option'+(p===r.role?' selected':'')+'>'+p+'</option>';
       }
-      html += '<div class="role-row">' +
-        '<select data-i="' + i + '" data-k="role">' + opts + '</select>' +
-        '<input type="number" min="1" value="' + r.count + '" data-i="' + i + '" data-k="count">' +
-        '<button type="button" data-remove="' + i + '">×</button>' +
-      '</div>';
+      html+='<div class="role-row"><select data-i="'+i+'" data-k="role">'+opts+'</select>'+
+        '<input type="number" min="1" value="'+r.count+'" data-i="'+i+'" data-k="count">'+
+        '<button type="button" data-remove="'+i+'">×</button></div>';
     }
-    c.innerHTML = html;
-
-    var inputs = c.querySelectorAll('select, input');
+    c.innerHTML=html;
+    var inputs=c.querySelectorAll('select, input');
     for(var k=0;k<inputs.length;k++){
-      inputs[k].onchange = function(e){
-        var i = +e.target.getAttribute('data-i');
-        var key = e.target.getAttribute('data-k');
-        state.tempRoles[i][key] = (key === 'count') ? (+e.target.value || 1) : e.target.value;
+      inputs[k].onchange=function(e){
+        var i=+e.target.getAttribute('data-i');
+        var key=e.target.getAttribute('data-k');
+        state.tempRoles[i][key]=(key==='count')?(+e.target.value||1):e.target.value;
       };
     }
-
-    var removes = c.querySelectorAll('[data-remove]');
+    var removes=c.querySelectorAll('[data-remove]');
     for(var m=0;m<removes.length;m++){
-      removes[m].onclick = function(e){
-        var i = +e.target.getAttribute('data-remove');
-        state.tempRoles.splice(i, 1);
-        if(state.tempRoles.length === 0) state.tempRoles = [{ role: 'مصور', count: 1 }];
+      removes[m].onclick=function(e){
+        var i=+e.target.getAttribute('data-remove');
+        state.tempRoles.splice(i,1);
+        if(state.tempRoles.length===0)state.tempRoles=[{role:'مصور',count:1}];
         renderRoleRows();
       };
     }
   }
 
   function saveOrder(){
-    var client = document.getElementById('f-client').value.trim();
-    var date = document.getElementById('f-date').value;
-    var time = document.getElementById('f-time').value;
-    var departure = document.getElementById('f-departure').value;
-    var location = document.getElementById('f-location').value.trim();
-
-    if(!client){ toast('اكتب اسم العميل', 'error'); return; }
-    if(!date){ toast('اختار التاريخ', 'error'); return; }
-
-    var roles = [];
+    var client=document.getElementById('f-client').value.trim();
+    var date=document.getElementById('f-date').value;
+    var time=document.getElementById('f-time').value;
+    var departure=document.getElementById('f-departure').value;
+    var location=document.getElementById('f-location').value.trim();
+    if(!client){toast('اكتب اسم العميل','error');return;}
+    if(!date){toast('اختار التاريخ','error');return;}
+    var roles=[];
     for(var i=0;i<state.tempRoles.length;i++){
-      roles.push({ role: state.tempRoles[i].role, count: +state.tempRoles[i].count });
+      roles.push({role:state.tempRoles[i].role,count:+state.tempRoles[i].count});
     }
-
-    var order = {
-      id: uid('order'),
-      client: client, date: date, time: time,
-      departure: departure, location: location,
-      roles: roles, assignments: {}, status: 'open',
-      createdAt: new Date().toISOString()
-    };
-
+    var order={id:uid('order'),client:client,date:date,time:time,departure:departure,location:location,roles:roles,assignments:{},status:'open',createdAt:new Date().toISOString()};
     state.orders.unshift(order);
     saveOrders();
-    toast('تم حفظ الأوردر ✅', 'success');
-    state.tempRoles = [{ role: 'مصور', count: 1 }];
-    state.currentTab = 'today';
+    toast('تم حفظ الأوردر ✅','success');
+    state.tempRoles=[{role:'مصور',count:1}];
+    state.currentTab='today';
     render();
   }
 
-  /* -------- Screen 2 -------- */
   function renderToday(main){
-    var today = todayISO();
-    var todays = [];
+    var today=todayISO();
+    var todays=[];
     for(var i=0;i<state.orders.length;i++){
-      if(state.orders[i].date === today) todays.push(state.orders[i]);
+      if(state.orders[i].date===today)todays.push(state.orders[i]);
     }
-
-    var html = '<div class="page-header"><h1>أوردرات اليوم</h1><p>' + todays.length + ' أوردر</p></div>';
-
-    if(todays.length === 0){
-      html += '<div class="empty-state"><div class="icon">📭</div><h3>مفيش أوردرات النهاردة</h3><p>اضغط على "+ أوردر جديد".</p></div>';
-    } else {
-      for(var j=0;j<todays.length;j++){
-        html += renderOrderCard(todays[j]);
-      }
+    var html='<div class="page-header"><h1>أوردرات اليوم</h1><p>'+todays.length+' أوردر</p></div>';
+    if(todays.length===0){
+      html+='<div class="empty-state"><div class="icon">📭</div><h3>مفيش أوردرات النهاردة</h3><p>اضغط على "+ أوردر جديد".</p></div>';
+    }else{
+      for(var j=0;j<todays.length;j++)html+=renderOrderCard(todays[j]);
     }
-    main.innerHTML = html;
-
-    var delBtns = main.querySelectorAll('[data-del-order]');
+    main.innerHTML=html;
+    var delBtns=main.querySelectorAll('[data-del-order]');
     for(var k=0;k<delBtns.length;k++){
-      delBtns[k].onclick = function(e){
-        var id = e.target.getAttribute('data-del-order');
-        if(!confirm('متأكد تحذف الأوردر ده؟')) return;
-        var remaining = [];
+      delBtns[k].onclick=function(e){
+        var id=e.target.getAttribute('data-del-order');
+        if(!confirm('متأكد تحذف الأوردر ده؟'))return;
+        var remaining=[];
         for(var x=0;x<state.orders.length;x++){
-          if(state.orders[x].id !== id) remaining.push(state.orders[x]);
+          if(state.orders[x].id!==id)remaining.push(state.orders[x]);
         }
-        state.orders = remaining;
+        state.orders=remaining;
         saveOrders();
         render();
-        toast('تم الحذف', 'success');
+        toast('تم الحذف','success');
       };
     }
   }
 
   function renderOrderCard(o){
-    var rolesHtml = '';
+    var rolesHtml='';
     for(var i=0;i<o.roles.length;i++){
-      var r = o.roles[i];
-      var assigned = (o.assignments && o.assignments[r.role]) ? o.assignments[r.role].length : 0;
-      var complete = assigned >= r.count;
-      rolesHtml += '<div class="role-status' + (complete?' complete':'') + '">' +
-        '<span class="role-name">' + esc(r.role) + '</span>' +
-        '<span class="role-count">' + assigned + ' / ' + r.count + '</span>' +
-      '</div>';
+      var r=o.roles[i];
+      var assigned=(o.assignments&&o.assignments[r.role])?o.assignments[r.role].length:0;
+      var complete=assigned>=r.count;
+      rolesHtml+='<div class="role-status'+(complete?' complete':'')+'">'+
+        '<span class="role-name">'+esc(r.role)+'</span>'+
+        '<span class="role-count">'+assigned+' / '+r.count+'</span></div>';
     }
-
-    return '<div class="order-card">' +
-      '<h3>' + esc(o.client) + '</h3>' +
-      '<div class="order-meta">' +
-        '<span>📅 ' + esc(o.date) + '</span>' +
-        '<span>🕐 حضور ' + esc(o.time) + '</span>' +
-        '<span>🚗 تحرك ' + esc(o.departure) + '</span>' +
-        '<span>📍 ' + esc(o.location || '—') + '</span>' +
-      '</div>' +
-      '<div class="roles-status">' + rolesHtml + '</div>' +
-      '<div class="form-actions">' +
-        '<button class="btn btn-secondary btn-sm">+ عيّن الفريق (قريباً)</button>' +
-        '<button class="btn btn-danger btn-sm" data-del-order="' + o.id + '">حذف</button>' +
-      '</div>' +
-    '</div>';
+    return '<div class="order-card"><h3>'+esc(o.client)+'</h3>'+
+      '<div class="order-meta"><span>📅 '+esc(o.date)+'</span>'+
+      '<span>🕐 حضور '+esc(o.time)+'</span>'+
+      '<span>🚗 تحرك '+esc(o.departure)+'</span>'+
+      '<span>📍 '+esc(o.location||'—')+'</span></div>'+
+      '<div class="roles-status">'+rolesHtml+'</div>'+
+      '<div class="form-actions"><button class="btn btn-secondary btn-sm">+ عيّن الفريق (قريباً)</button>'+
+      '<button class="btn btn-danger btn-sm" data-del-order="'+o.id+'">حذف</button></div></div>';
   }
 
-  /* -------- Screen 3 -------- */
   function renderTeam(main){
-    var html =
-      '<div class="page-header"><h1>الفريق</h1><p>' + state.people.length + ' شخص مسجل</p></div>' +
-      '<div class="card">' +
-        '<h3 style="margin-bottom:16px">أضف شخص جديد</h3>' +
-        '<div class="form-grid">' +
-          '<div class="form-group"><label>الاسم</label><input id="p-name" type="text" placeholder="أحمد سعيد"></div>' +
-          '<div class="form-group"><label>الموبايل</label><input id="p-phone" type="tel" placeholder="01xxxxxxxxx"></div>' +
-          '<div class="form-group"><label>النوع</label><select id="p-type"><option value="employee">موظف</option><option value="freelancer">فريلانسر</option></select></div>' +
-          '<div class="form-group"><label>المهارات</label><input id="p-skills" type="text" placeholder="مصور, صوت, فني"></div>' +
-        '</div>' +
-        '<div class="form-actions"><button class="btn btn-primary" id="save-person">أضف</button></div>' +
-      '</div>';
-
-    if(state.people.length === 0){
-      html += '<div class="empty-state"><div class="icon">👥</div><h3>مفيش حد مسجل لسه</h3><p>ضيف أول موظف أو فريلانسر.</p></div>';
-    } else {
+    var html='<div class="page-header"><h1>الفريق</h1><p>'+state.people.length+' شخص مسجل</p></div>'+
+      '<div class="card"><h3 style="margin-bottom:16px">أضف شخص جديد</h3>'+
+      '<div class="form-grid">'+
+      '<div class="form-group"><label>الاسم</label><input id="p-name" type="text" placeholder="أحمد سعيد"></div>'+
+      '<div class="form-group"><label>الموبايل</label><input id="p-phone" type="tel" placeholder="01xxxxxxxxx"></div>'+
+      '<div class="form-group"><label>النوع</label><select id="p-type"><option value="employee">موظف</option><option value="freelancer">فريلانسر</option></select></div>'+
+      '<div class="form-group"><label>المهارات</label><input id="p-skills" type="text" placeholder="مصور, صوت, فني"></div>'+
+      '</div><div class="form-actions"><button class="btn btn-primary" id="save-person">أضف</button></div></div>';
+    if(state.people.length===0){
+      html+='<div class="empty-state"><div class="icon">👥</div><h3>مفيش حد مسجل لسه</h3><p>ضيف أول موظف أو فريلانسر.</p></div>';
+    }else{
       for(var i=0;i<state.people.length;i++){
-        var p = state.people[i];
-        html += '<div class="person-card">' +
-          '<div class="person-info">' +
-            '<h4>' + esc(p.name) + ' <span class="badge ' + p.type + '">' + (p.type==='employee'?'موظف':'فريلانسر') + '</span></h4>' +
-            '<p>📱 ' + esc(p.phone || '—') + ' • 🛠️ ' + esc(p.skills || '—') + '</p>' +
-          '</div>' +
-          '<button class="btn btn-danger btn-sm" data-del-person="' + p.id + '">حذف</button>' +
-        '</div>';
+        var p=state.people[i];
+        html+='<div class="person-card"><div class="person-info">'+
+          '<h4>'+esc(p.name)+' <span class="badge '+p.type+'">'+(p.type==='employee'?'موظف':'فريلانسر')+'</span></h4>'+
+          '<p>📱 '+esc(p.phone||'—')+' • 🛠️ '+esc(p.skills||'—')+'</p></div>'+
+          '<button class="btn btn-danger btn-sm" data-del-person="'+p.id+'">حذف</button></div>';
       }
     }
-    main.innerHTML = html;
-
-    document.getElementById('save-person').onclick = savePerson;
-
-    var delBtns = main.querySelectorAll('[data-del-person]');
+    main.innerHTML=html;
+    document.getElementById('save-person').onclick=savePerson;
+    var delBtns=main.querySelectorAll('[data-del-person]');
     for(var k=0;k<delBtns.length;k++){
-      delBtns[k].onclick = function(e){
-        var id = e.target.getAttribute('data-del-person');
-        if(!confirm('متأكد تحذف الشخص ده؟')) return;
-        var remaining = [];
+      delBtns[k].onclick=function(e){
+        var id=e.target.getAttribute('data-del-person');
+        if(!confirm('متأكد تحذف الشخص ده؟'))return;
+        var remaining=[];
         for(var x=0;x<state.people.length;x++){
-          if(state.people[x].id !== id) remaining.push(state.people[x]);
+          if(state.people[x].id!==id)remaining.push(state.people[x]);
         }
-        state.people = remaining;
+        state.people=remaining;
         savePeople();
         render();
-        toast('تم الحذف', 'success');
+        toast('تم الحذف','success');
       };
     }
   }
 
   function savePerson(){
-    var name = document.getElementById('p-name').value.trim();
-    var phone = document.getElementById('p-phone').value.trim();
-    var type = document.getElementById('p-type').value;
-    var skills = document.getElementById('p-skills').value.trim();
-
-    if(!name){ toast('اكتب الاسم', 'error'); return; }
-
-    state.people.unshift({
-      id: uid('person'),
-      name: name, phone: phone, type: type, skills: skills,
-      createdAt: new Date().toISOString()
-    });
+    var name=document.getElementById('p-name').value.trim();
+    var phone=document.getElementById('p-phone').value.trim();
+    var type=document.getElementById('p-type').value;
+    var skills=document.getElementById('p-skills').value.trim();
+    if(!name){toast('اكتب الاسم','error');return;}
+    state.people.unshift({id:uid('person'),name:name,phone:phone,type:type,skills:skills,createdAt:new Date().toISOString()});
     savePeople();
-    toast('تم إضافة ' + name, 'success');
+    toast('تم إضافة '+name,'success');
     render();
   }
 
-  /* -------- Init -------- */
   function init(){
     loadData();
-
-    var tabs = document.querySelectorAll('.tabs button');
+    var tabs=document.querySelectorAll('.tabs button');
     for(var i=0;i<tabs.length;i++){
-      tabs[i].onclick = function(e){
-        state.currentTab = e.target.getAttribute('data-tab');
+      tabs[i].onclick=function(e){
+        state.currentTab=e.target.getAttribute('data-tab');
         render();
       };
     }
-
     render();
   }
 
-  if(document.readyState === 'loading'){
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
-  }
-
+  if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',init);}
+  else{init();}
 })();
 </script>
 </body>
