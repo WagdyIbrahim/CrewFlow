@@ -1,4 +1,5 @@
-document.addEventListener("DOMContentLoaded",function(){setupNavigation();setupGlobalActions();});
+document.addEventListener("DOMContentLoaded",function(){setupNavigation();setupGlobalActions();updateDashboardStats();});
+
 function setupNavigation(){
   const navItems=document.querySelectorAll(".nav-item");
   navItems.forEach(function(item){
@@ -9,26 +10,77 @@ function setupNavigation(){
       const page=item.textContent.trim();
       if(page==="Events"){showEventsPage();return;}
       if(page==="Dashboard"){showDashboard();return;}
+      if(page==="People"){showComingSoon("People");return;}
+      if(page==="Clients"){showComingSoon("Clients");return;}
+      if(page==="Assignments"){showComingSoon("Assignments");return;}
+      if(page==="Availability"){showComingSoon("Availability");return;}
+      if(page==="Resources"){showComingSoon("Resources");return;}
+      if(page==="Notifications"){showComingSoon("Notifications");return;}
     });
   });
 }
+
 function setupGlobalActions(){
   document.addEventListener("click",function(event){
     const createButton=event.target.closest(".primary-button");
     if(createButton&&createButton.textContent.includes("Create Event")){showCreateEvent();}
   });
 }
-function showDashboard(){window.location.reload();}
-function getEvents(){return JSON.parse(localStorage.getItem("crewflow_events")||"[]");}
-function saveEvents(events){localStorage.setItem("crewflow_events",JSON.stringify(events));}
+
+function getEvents(){
+  return JSON.parse(localStorage.getItem("crewflow_events")||"[]");
+}
+
+function saveEvents(events){
+  localStorage.setItem("crewflow_events",JSON.stringify(events));
+}
+
 function statusLabel(status){
-  const labels={draft:"Draft",open:"Open",assigned:"Assigned","in-progress":"In Progress",completed:"Completed",cancelled:"Cancelled"};
+  const labels={
+    draft:"Draft",
+    open:"Open",
+    assigned:"Assigned",
+    "in-progress":"In Progress",
+    completed:"Completed",
+    cancelled:"Cancelled"
+  };
   return labels[status]||"Draft";
 }
+
+function statusClass(status){
+  return "status-"+(status||"draft");
+}
+
+function showDashboard(){
+  window.location.reload();
+}
+
+function updateDashboardStats(){
+  const events=getEvents();
+  const today=new Date().toISOString().split("T")[0];
+  const todayEvents=events.filter(function(event){return event.date===today;});
+  const activeEvents=events.filter(function(event){
+    return event.status==="open"||event.status==="assigned"||event.status==="in-progress";
+  });
+  const pendingEvents=events.filter(function(event){
+    return event.status==="open"||event.status==="draft";
+  });
+  const availableCrew=localStorage.getItem("crewflow_people");
+  const people=availableCrew?JSON.parse(availableCrew):[];
+  const stats=document.querySelectorAll(".stat-card strong");
+  if(stats.length>=4){
+    stats[0].textContent=todayEvents.length;
+    stats[1].textContent=people.length;
+    stats[2].textContent=pendingEvents.length;
+    stats[3].textContent=activeEvents.length;
+  }
+}
+
 function showEventsPage(){
   const dashboard=document.querySelector(".dashboard");
   if(!dashboard)return;
   const events=getEvents();
+
   dashboard.innerHTML=`
     <div class="page-header">
       <div>
@@ -59,59 +111,84 @@ function showEventsPage(){
       <div id="eventsContainer"></div>
     </section>
   `;
+
   document.getElementById("createEventTopButton").addEventListener("click",showCreateEvent);
+
   const search=document.getElementById("eventSearch");
   const filter=document.getElementById("eventStatusFilter");
+
   function renderEvents(){
     const searchValue=search.value.toLowerCase().trim();
     const statusValue=filter.value;
+
     const filtered=events.filter(function(event){
       const text=((event.name||"")+" "+(event.client||"")+" "+(event.location||"")).toLowerCase();
       const matchesSearch=!searchValue||text.includes(searchValue);
       const matchesStatus=statusValue==="all"||(event.status||"draft")===statusValue;
       return matchesSearch&&matchesStatus;
     });
+
     const container=document.getElementById("eventsContainer");
+
     if(filtered.length===0){
-      container.innerHTML=`<div class="empty-state"><div class="empty-icon">📅</div><h3>No events found</h3><p>Try another search or create a new event.</p><button type="button" class="primary-button" id="createEventEmptyButton">+ Create Event</button></div>`;
+      container.innerHTML=`
+        <div class="empty-state">
+          <div class="empty-icon">📅</div>
+          <h3>No events found</h3>
+          <p>Try another search or create a new event.</p>
+          <button type="button" class="primary-button" id="createEventEmptyButton">+ Create Event</button>
+        </div>
+      `;
       document.getElementById("createEventEmptyButton").addEventListener("click",showCreateEvent);
       return;
     }
-    container.innerHTML=`<div class="events-list">${filtered.map(function(event){
-      return `
-        <div class="event-card">
-          <div class="event-card-main">
-            <div class="event-icon">📅</div>
-            <div>
-              <h3>${event.name||"Unnamed Event"}</h3>
-              <p>${event.client||"No client specified"}</p>
+
+    container.innerHTML=`
+      <div class="events-list">
+        ${filtered.map(function(event){
+          return `
+            <div class="event-card">
+              <div class="event-card-main">
+                <div class="event-icon">📅</div>
+                <div>
+                  <h3>${event.name||"Unnamed Event"}</h3>
+                  <p>${event.client||"No client specified"}</p>
+                </div>
+              </div>
+              <div class="event-details">
+                <span>📆 ${event.date||"No date"}</span>
+                <span>🕐 ${event.startTime||"--"} - ${event.endTime||"--"}</span>
+                <span>📍 ${event.location||"No location"}</span>
+                <span>👥 ${event.headcount||"0"} crew</span>
+                <span>📌 ${statusLabel(event.status)}</span>
+                <button type="button" class="secondary-button event-view-button" data-event-id="${event.id}">View Details</button>
+              </div>
             </div>
-          </div>
-          <div class="event-details">
-            <span>📆 ${event.date||"No date"}</span>
-            <span>🕐 ${event.startTime||"--"} - ${event.endTime||"--"}</span>
-            <span>📍 ${event.location||"No location"}</span>
-            <span>👥 ${event.headcount||"0"} crew</span>
-            <span>📌 ${statusLabel(event.status)}</span>
-            <button type="button" class="secondary-button event-view-button" data-event-id="${event.id}">View Details</button>
-          </div>
-        </div>
-      `;
-    }).join("")}</div>`;
+          `;
+        }).join("")}
+      </div>
+    `;
+
     container.querySelectorAll(".event-view-button").forEach(function(button){
-      button.addEventListener("click",function(){showEventDetails(button.getAttribute("data-event-id"));});
+      button.addEventListener("click",function(){
+        showEventDetails(button.getAttribute("data-event-id"));
+      });
     });
   }
+
   search.addEventListener("input",renderEvents);
   filter.addEventListener("change",renderEvents);
   renderEvents();
 }
+
 function showEventDetails(eventId){
   const events=getEvents();
   const event=events.find(function(item){return String(item.id)===String(eventId);});
   if(!event){alert("Event not found.");return;}
+
   const dashboard=document.querySelector(".dashboard");
   if(!dashboard)return;
+
   dashboard.innerHTML=`
     <div class="page-header">
       <div>
@@ -152,7 +229,9 @@ function showEventDetails(eventId){
       </div>
     </section>
   `;
+
   document.getElementById("editEventButton").addEventListener("click",function(){showEditEvent(eventId);});
+
   document.getElementById("deleteEventButton").addEventListener("click",function(){
     if(confirm("Are you sure you want to delete this event?")){
       const remaining=events.filter(function(item){return String(item.id)!==String(eventId);});
@@ -161,17 +240,30 @@ function showEventDetails(eventId){
       showEventsPage();
     }
   });
+
   document.getElementById("backToEvents").addEventListener("click",showEventsPage);
 }
+
 function showEditEvent(eventId){
   const events=getEvents();
   const event=events.find(function(item){return String(item.id)===String(eventId);});
   if(!event){alert("Event not found.");return;}
+
   const dashboard=document.querySelector(".dashboard");
+  if(!dashboard)return;
+
   dashboard.innerHTML=`
-    <div class="page-header"><div><h2>Edit Event</h2><p>Update the operational information for this event.</p></div></div>
+    <div class="page-header">
+      <div>
+        <h2>Edit Event</h2>
+        <p>Update the operational information for this event.</p>
+      </div>
+    </div>
     <section class="dashboard-section">
-      <div class="section-header"><h3>${event.name||"Unnamed Event"}</h3><p>Edit event information below.</p></div>
+      <div class="section-header">
+        <h3>${event.name||"Unnamed Event"}</h3>
+        <p>Edit event information below.</p>
+      </div>
       <form class="event-form" id="editEventForm">
         <div class="form-grid">
           <div class="form-group"><label for="editEventName">Event Name</label><input type="text" id="editEventName" value="${event.name||""}" required></div>
@@ -193,14 +285,23 @@ function showEditEvent(eventId){
           <div class="form-group"><label><input type="checkbox" id="editWeekend" ${event.weekend?"checked":""}> Weekend Event</label></div>
           <div class="form-group full-width"><label for="editNotes">Notes</label><textarea id="editNotes" rows="6">${event.notes||""}</textarea></div>
         </div>
-        <div class="form-actions"><button type="button" class="secondary-button" id="cancelEditEvent">Cancel</button><button type="submit" class="primary-button">Save Changes</button></div>
+        <div class="form-actions">
+          <button type="button" class="secondary-button" id="cancelEditEvent">Cancel</button>
+          <button type="submit" class="primary-button">Save Changes</button>
+        </div>
       </form>
     </section>
   `;
+
   document.getElementById("editStatus").value=event.status||"draft";
-  document.getElementById("cancelEditEvent").addEventListener("click",function(){showEventDetails(eventId);});
+
+  document.getElementById("cancelEditEvent").addEventListener("click",function(){
+    showEventDetails(eventId);
+  });
+
   document.getElementById("editEventForm").addEventListener("submit",function(e){
     e.preventDefault();
+
     const updatedEvent={
       id:event.id,
       name:document.getElementById("editEventName").value.trim(),
@@ -222,18 +323,32 @@ function showEditEvent(eventId){
       weekend:document.getElementById("editWeekend").checked,
       notes:document.getElementById("editNotes").value.trim()
     };
-    saveEvents(events.map(function(item){return String(item.id)===String(eventId)?updatedEvent:item;}));
+
+    saveEvents(events.map(function(item){
+      return String(item.id)===String(eventId)?updatedEvent:item;
+    }));
+
     alert("Event updated successfully.");
     showEventDetails(eventId);
   });
 }
+
 function showCreateEvent(){
   const dashboard=document.querySelector(".dashboard");
   if(!dashboard)return;
+
   dashboard.innerHTML=`
-    <div class="page-header"><div><h2>Create Event</h2><p>Enter the operational information for the new event.</p></div></div>
+    <div class="page-header">
+      <div>
+        <h2>Create Event</h2>
+        <p>Enter the operational information for the new event.</p>
+      </div>
+    </div>
     <section class="dashboard-section">
-      <div class="section-header"><h3>Event Information</h3><p>Basic details about the event and its operational requirements.</p></div>
+      <div class="section-header">
+        <h3>Event Information</h3>
+        <p>Basic details about the event and its operational requirements.</p>
+      </div>
       <form class="event-form" id="createEventForm">
         <div class="form-grid">
           <div class="form-group"><label for="eventName">Event Name</label><input type="text" id="eventName" placeholder="Enter event name" required></div>
@@ -255,13 +370,19 @@ function showCreateEvent(){
           <div class="form-group"><label><input type="checkbox" id="weekend"> Weekend Event</label></div>
           <div class="form-group full-width"><label for="notes">Notes</label><textarea id="notes" rows="5" placeholder="Additional event notes..."></textarea></div>
         </div>
-        <div class="form-actions"><button type="button" class="secondary-button" id="cancelCreateEvent">Cancel</button><button type="submit" class="primary-button">Save Event</button></div>
+        <div class="form-actions">
+          <button type="button" class="secondary-button" id="cancelCreateEvent">Cancel</button>
+          <button type="submit" class="primary-button">Save Event</button>
+        </div>
       </form>
     </section>
   `;
+
   document.getElementById("cancelCreateEvent").addEventListener("click",showEventsPage);
+
   document.getElementById("createEventForm").addEventListener("submit",function(e){
     e.preventDefault();
+
     const eventData={
       id:Date.now(),
       name:document.getElementById("eventName").value.trim(),
@@ -283,10 +404,32 @@ function showCreateEvent(){
       weekend:document.getElementById("weekend").checked,
       notes:document.getElementById("notes").value.trim()
     };
+
     const events=getEvents();
     events.push(eventData);
     saveEvents(events);
     alert("Event saved successfully.");
     showEventsPage();
   });
+}
+
+function showComingSoon(section){
+  const dashboard=document.querySelector(".dashboard");
+  if(!dashboard)return;
+
+  dashboard.innerHTML=`
+    <div class="page-header">
+      <div>
+        <h2>${section}</h2>
+        <p>CrewFlow ${section} management.</p>
+      </div>
+    </div>
+    <section class="dashboard-section">
+      <div class="empty-state">
+        <div class="empty-icon">🚀</div>
+        <h3>${section} Module</h3>
+        <p>This module is ready for the next development stage.</p>
+      </div>
+    </section>
+  `;
 }
