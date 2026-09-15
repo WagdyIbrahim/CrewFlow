@@ -1,5 +1,17 @@
-```javascript
 document.addEventListener("DOMContentLoaded", function () {
+
+  setupNavigation();
+
+  setupGlobalActions();
+
+});
+
+
+/* =========================================================
+   NAVIGATION
+========================================================= */
+
+function setupNavigation() {
 
   const navItems = document.querySelectorAll(".nav-item");
 
@@ -19,44 +31,47 @@ document.addEventListener("DOMContentLoaded", function () {
 
       if (page === "Events") {
         showEventsPage();
+        return;
       }
 
       if (page === "Dashboard") {
         showDashboard();
+        return;
       }
 
     });
 
   });
 
+}
+
+
+/* =========================================================
+   GLOBAL ACTIONS
+========================================================= */
+
+function setupGlobalActions() {
 
   document.addEventListener("click", function (event) {
 
+    const createButton = event.target.closest(".primary-button");
+
     if (
-      event.target.classList.contains("primary-button") &&
-      event.target.textContent.includes("Create Event")
+      createButton &&
+      createButton.textContent.includes("Create Event")
     ) {
       showCreateEvent();
       return;
     }
 
-
-    const eventButton = event.target.closest(".event-view-button");
-
-    if (eventButton) {
-
-      const eventId = eventButton.getAttribute("data-event-id");
-
-      showEventDetails(eventId);
-
-      return;
-
-    }
-
   });
 
-});
+}
 
+
+/* =========================================================
+   DASHBOARD
+========================================================= */
 
 function showDashboard() {
 
@@ -65,13 +80,23 @@ function showDashboard() {
 }
 
 
+/* =========================================================
+   EVENTS PAGE
+========================================================= */
+
 function showEventsPage() {
 
   const dashboard = document.querySelector(".dashboard");
 
+  if (!dashboard) {
+    return;
+  }
+
+
   const events = JSON.parse(
     localStorage.getItem("crewflow_events") || "[]"
   );
+
 
   let eventsContent = "";
 
@@ -94,7 +119,11 @@ function showEventsPage() {
           Create your first event to start building your crew.
         </p>
 
-        <button class="primary-button">
+        <button
+          type="button"
+          class="primary-button"
+          id="createEventEmptyButton"
+        >
           + Create Event
         </button>
 
@@ -155,12 +184,12 @@ function showEventsPage() {
 
 
                 <button
-  type="button"
-  class="secondary-button"
-  onclick="showEventDetails('${event.id}')"
->
-  View Details
-</button>
+                  type="button"
+                  class="secondary-button event-view-button"
+                  data-event-id="${event.id}"
+                >
+                  View Details
+                </button>
 
               </div>
 
@@ -194,7 +223,11 @@ function showEventsPage() {
       </div>
 
 
-      <button class="primary-button">
+      <button
+        type="button"
+        class="primary-button"
+        id="createEventTopButton"
+      >
         + Create Event
       </button>
 
@@ -226,8 +259,71 @@ function showEventsPage() {
 
   `;
 
+
+  /* =========================================================
+     CREATE EVENT BUTTONS
+  ========================================================= */
+
+  const createTopButton =
+    document.getElementById("createEventTopButton");
+
+  if (createTopButton) {
+
+    createTopButton.addEventListener("click", function () {
+
+      showCreateEvent();
+
+    });
+
+  }
+
+
+  const createEmptyButton =
+    document.getElementById("createEventEmptyButton");
+
+  if (createEmptyButton) {
+
+    createEmptyButton.addEventListener("click", function () {
+
+      showCreateEvent();
+
+    });
+
+  }
+
+
+  /* =========================================================
+     VIEW DETAILS BUTTONS
+  ========================================================= */
+
+  const viewButtons =
+    document.querySelectorAll(".event-view-button");
+
+
+  viewButtons.forEach(function (button) {
+
+    button.addEventListener("click", function (event) {
+
+      event.preventDefault();
+
+      event.stopPropagation();
+
+      const eventId =
+        button.getAttribute("data-event-id");
+
+
+      showEventDetails(eventId);
+
+    });
+
+  });
+
 }
 
+
+/* =========================================================
+   EVENT DETAILS
+========================================================= */
 
 function showEventDetails(eventId) {
 
@@ -253,6 +349,11 @@ function showEventDetails(eventId) {
 
 
   const dashboard = document.querySelector(".dashboard");
+
+
+  if (!dashboard) {
+    return;
+  }
 
 
   dashboard.innerHTML = `
@@ -489,21 +590,53 @@ function showEventDetails(eventId) {
   `;
 
 
-  document
-    .getElementById("backToEvents")
-    .addEventListener("click", showEventsPage);
+  /* =========================================================
+     BACK BUTTONS
+  ========================================================= */
+
+  const backTop =
+    document.getElementById("backToEvents");
+
+  if (backTop) {
+
+    backTop.addEventListener("click", function () {
+
+      showEventsPage();
+
+    });
+
+  }
 
 
-  document
-    .getElementById("backToEventsBottom")
-    .addEventListener("click", showEventsPage);
+  const backBottom =
+    document.getElementById("backToEventsBottom");
+
+  if (backBottom) {
+
+    backBottom.addEventListener("click", function () {
+
+      showEventsPage();
+
+    });
+
+  }
 
 }
 
 
+/* =========================================================
+   CREATE EVENT
+========================================================= */
+
 function showCreateEvent() {
 
   const dashboard = document.querySelector(".dashboard");
+
+
+  if (!dashboard) {
+    return;
+  }
+
 
   dashboard.innerHTML = `
 
@@ -716,7 +849,7 @@ function showCreateEvent() {
           <button
             type="button"
             class="secondary-button"
-            onclick="showEventsPage()"
+            id="cancelEventButton"
           >
             Cancel
           </button>
@@ -737,8 +870,27 @@ function showCreateEvent() {
 
   `;
 
+
+  const cancelButton =
+    document.getElementById("cancelEventButton");
+
+
+  if (cancelButton) {
+
+    cancelButton.addEventListener("click", function () {
+
+      showEventsPage();
+
+    });
+
+  }
+
 }
 
+
+/* =========================================================
+   SAVE EVENT
+========================================================= */
 
 document.addEventListener("submit", function (event) {
 
@@ -746,32 +898,47 @@ document.addEventListener("submit", function (event) {
     return;
   }
 
+
   event.preventDefault();
 
 
   const eventData = {
 
-    name: document.getElementById("eventName").value.trim(),
+    name:
+      document.getElementById("eventName").value.trim(),
 
-    client: document.getElementById("clientName").value.trim(),
+    client:
+      document.getElementById("clientName").value.trim(),
 
-    date: document.getElementById("eventDate").value,
+    date:
+      document.getElementById("eventDate").value,
 
-    callTime: document.getElementById("callTime").value,
+    callTime:
+      document.getElementById("callTime").value,
 
-    startTime: document.getElementById("startTime").value,
+    startTime:
+      document.getElementById("startTime").value,
 
-    endTime: document.getElementById("endTime").value,
+    endTime:
+      document.getElementById("endTime").value,
 
-    location: document.getElementById("location").value.trim(),
+    location:
+      document.getElementById("location").value.trim(),
 
-    maps: document.getElementById("maps").value.trim(),
+    maps:
+      document.getElementById("maps").value.trim(),
 
-    headcount: document.getElementById("headcount").value,
+    headcount:
+      document.getElementById("headcount").value,
 
-    teamLeader: document.getElementById("teamLeader").value.trim(),
+    teamLeader:
+      document.getElementById("teamLeader").value.trim(),
 
-    notes: document.getElementById("notes").value.trim()
+    notes:
+      document.getElementById("notes").value.trim(),
+
+    id:
+      Date.now()
 
   };
 
@@ -779,9 +946,6 @@ document.addEventListener("submit", function (event) {
   const events = JSON.parse(
     localStorage.getItem("crewflow_events") || "[]"
   );
-
-
-  eventData.id = Date.now();
 
 
   events.push(eventData);
@@ -799,4 +963,3 @@ document.addEventListener("submit", function (event) {
   showEventsPage();
 
 });
-```
