@@ -120,6 +120,22 @@ function saveAssignments(assignments){
   );
 }
 
+function getAssignmentHistory(){
+  try{
+    return JSON.parse(
+      localStorage.getItem("crewflow_assignment_history")||"[]"
+    );
+  }catch(error){
+    return [];
+  }
+}
+
+function saveAssignmentHistory(history){
+  localStorage.setItem(
+    "crewflow_assignment_history",
+    JSON.stringify(history)
+  );
+}
 function escapeHtml(value){
   return String(value??"")
     .replace(/&/g,"&amp;")
