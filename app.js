@@ -2754,13 +2754,37 @@ function assignPersonToEvent(
     overrideReason:""
   };
 
-  assignments.push(assignment);
+ assignments.push(assignment);
 
-  saveAssignments(assignments);
+saveAssignments(assignments);
 
-  const newAssignedCount=
-    currentAssigned+1;
+/*
+ * ASSIGNMENT HISTORY
+ *
+ * Keep a permanent record of this assignment
+ * for future fairness / rotation calculations.
+ */
+const history=getAssignmentHistory();
 
+history.push({
+  id:generateId("history"),
+  assignmentId:assignment.id,
+  eventId:event.id,
+  personId:person.id,
+  score:match.score,
+  reasons:match.reasons,
+  matchedSkills:match.matchedSkills,
+  missingSkills:match.missingSkills,
+  assignedAt:assignment.assignedAt,
+  status:"assigned",
+  completedAt:null,
+  cancelledAt:null
+});
+
+saveAssignmentHistory(history);
+
+const newAssignedCount=
+  currentAssigned+1;
   if(
     required>0&&
     newAssignedCount>=required
