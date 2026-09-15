@@ -54,7 +54,8 @@ function setupGlobalActions() {
 
   document.addEventListener("click", function (event) {
 
-    const createButton = event.target.closest(".primary-button");
+    const createButton =
+      event.target.closest(".primary-button");
 
     if (
       createButton &&
@@ -86,7 +87,8 @@ function showDashboard() {
 
 function showEventsPage() {
 
-  const dashboard = document.querySelector(".dashboard");
+  const dashboard =
+    document.querySelector(".dashboard");
 
   if (!dashboard) {
     return;
@@ -245,7 +247,9 @@ function showEventsPage() {
           </h3>
 
           <p>
-            ${events.length} event${events.length === 1 ? "" : "s"} registered.
+            ${events.length}
+            event${events.length === 1 ? "" : "s"}
+            registered.
           </p>
 
         </div>
@@ -260,20 +264,18 @@ function showEventsPage() {
   `;
 
 
-  /* =========================================================
-     CREATE EVENT BUTTONS
-  ========================================================= */
-
   const createTopButton =
     document.getElementById("createEventTopButton");
 
+
   if (createTopButton) {
 
-    createTopButton.addEventListener("click", function () {
-
-      showCreateEvent();
-
-    });
+    createTopButton.addEventListener(
+      "click",
+      function () {
+        showCreateEvent();
+      }
+    );
 
   }
 
@@ -281,20 +283,18 @@ function showEventsPage() {
   const createEmptyButton =
     document.getElementById("createEventEmptyButton");
 
+
   if (createEmptyButton) {
 
-    createEmptyButton.addEventListener("click", function () {
-
-      showCreateEvent();
-
-    });
+    createEmptyButton.addEventListener(
+      "click",
+      function () {
+        showCreateEvent();
+      }
+    );
 
   }
 
-
-  /* =========================================================
-     VIEW DETAILS BUTTONS
-  ========================================================= */
 
   const viewButtons =
     document.querySelectorAll(".event-view-button");
@@ -348,7 +348,8 @@ function showEventDetails(eventId) {
   }
 
 
-  const dashboard = document.querySelector(".dashboard");
+  const dashboard =
+    document.querySelector(".dashboard");
 
 
   if (!dashboard) {
@@ -373,13 +374,26 @@ function showEventDetails(eventId) {
       </div>
 
 
-      <button
-        type="button"
-        class="secondary-button"
-        id="backToEvents"
-      >
-        ← Back to Events
-      </button>
+      <div style="display:flex; gap:10px;">
+
+        <button
+          type="button"
+          class="primary-button"
+          id="editEventButton"
+        >
+          ✏️ Edit Event
+        </button>
+
+
+        <button
+          type="button"
+          class="secondary-button"
+          id="backToEvents"
+        >
+          ← Back to Events
+        </button>
+
+      </div>
 
     </div>
 
@@ -590,20 +604,38 @@ function showEventDetails(eventId) {
   `;
 
 
-  /* =========================================================
-     BACK BUTTONS
-  ========================================================= */
+  const editButton =
+    document.getElementById("editEventButton");
+
+
+  if (editButton) {
+
+    editButton.addEventListener(
+      "click",
+      function () {
+
+        showEditEvent(eventId);
+
+      }
+    );
+
+  }
+
 
   const backTop =
     document.getElementById("backToEvents");
 
+
   if (backTop) {
 
-    backTop.addEventListener("click", function () {
+    backTop.addEventListener(
+      "click",
+      function () {
 
-      showEventsPage();
+        showEventsPage();
 
-    });
+      }
+    );
 
   }
 
@@ -611,13 +643,422 @@ function showEventDetails(eventId) {
   const backBottom =
     document.getElementById("backToEventsBottom");
 
+
   if (backBottom) {
 
-    backBottom.addEventListener("click", function () {
+    backBottom.addEventListener(
+      "click",
+      function () {
 
-      showEventsPage();
+        showEventsPage();
 
-    });
+      }
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   EDIT EVENT
+========================================================= */
+
+function showEditEvent(eventId) {
+
+  const events = JSON.parse(
+    localStorage.getItem("crewflow_events") || "[]"
+  );
+
+
+  const event = events.find(function (item) {
+
+    return String(item.id) === String(eventId);
+
+  });
+
+
+  if (!event) {
+
+    alert("Event not found.");
+
+    return;
+
+  }
+
+
+  const dashboard =
+    document.querySelector(".dashboard");
+
+
+  dashboard.innerHTML = `
+
+    <div class="page-header">
+
+      <div>
+
+        <h2>
+          Edit Event
+        </h2>
+
+        <p>
+          Update the operational information for this event.
+        </p>
+
+      </div>
+
+    </div>
+
+
+    <section class="dashboard-section">
+
+      <div class="section-header">
+
+        <h3>
+          ${event.name || "Unnamed Event"}
+        </h3>
+
+        <p>
+          Edit event information below.
+        </p>
+
+      </div>
+
+
+      <form
+        class="event-form"
+        id="editEventForm"
+      >
+
+        <div class="form-grid">
+
+
+          <div class="form-group">
+
+            <label for="editEventName">
+              Event Name
+            </label>
+
+            <input
+              type="text"
+              id="editEventName"
+              value="${event.name || ""}"
+              required
+            >
+
+          </div>
+
+
+          <div class="form-group">
+
+            <label for="editClientName">
+              Client
+            </label>
+
+            <input
+              type="text"
+              id="editClientName"
+              value="${event.client || ""}"
+            >
+
+          </div>
+
+
+          <div class="form-group">
+
+            <label for="editEventDate">
+              Event Date
+            </label>
+
+            <input
+              type="date"
+              id="editEventDate"
+              value="${event.date || ""}"
+              required
+            >
+
+          </div>
+
+
+          <div class="form-group">
+
+            <label for="editCallTime">
+              Call / Assembly Time
+            </label>
+
+            <input
+              type="time"
+              id="editCallTime"
+              value="${event.callTime || ""}"
+            >
+
+          </div>
+
+
+          <div class="form-group">
+
+            <label for="editStartTime">
+              Start Time
+            </label>
+
+            <input
+              type="time"
+              id="editStartTime"
+              value="${event.startTime || ""}"
+            >
+
+          </div>
+
+
+          <div class="form-group">
+
+            <label for="editEndTime">
+              End Time
+            </label>
+
+            <input
+              type="time"
+              id="editEndTime"
+              value="${event.endTime || ""}"
+            >
+
+          </div>
+
+
+          <div class="form-group full-width">
+
+            <label for="editLocation">
+              Location
+            </label>
+
+            <input
+              type="text"
+              id="editLocation"
+              value="${event.location || ""}"
+            >
+
+          </div>
+
+
+          <div class="form-group full-width">
+
+            <label for="editMaps">
+              Google Maps Link
+            </label>
+
+            <input
+              type="url"
+              id="editMaps"
+              value="${event.maps || ""}"
+              placeholder="https://maps.google.com/..."
+            >
+
+          </div>
+
+
+          <div class="form-group">
+
+            <label for="editHeadcount">
+              Required Headcount
+            </label>
+
+            <input
+              type="number"
+              id="editHeadcount"
+              min="1"
+              value="${event.headcount || ""}"
+            >
+
+          </div>
+
+
+          <div class="form-group">
+
+            <label for="editTeamLeader">
+              Team Leader
+            </label>
+
+            <input
+              type="text"
+              id="editTeamLeader"
+              value="${event.teamLeader || ""}"
+            >
+
+          </div>
+
+
+          <div class="form-group full-width">
+
+            <label for="editNotes">
+              Notes
+            </label>
+
+            <textarea
+              id="editNotes"
+              rows="6"
+            >${event.notes || ""}</textarea>
+
+          </div>
+
+
+        </div>
+
+
+        <div class="form-actions">
+
+          <button
+            type="button"
+            class="secondary-button"
+            id="cancelEditEvent"
+          >
+            Cancel
+          </button>
+
+
+          <button
+            type="submit"
+            class="primary-button"
+          >
+            Save Changes
+          </button>
+
+        </div>
+
+      </form>
+
+    </section>
+
+  `;
+
+
+  const cancelButton =
+    document.getElementById("cancelEditEvent");
+
+
+  if (cancelButton) {
+
+    cancelButton.addEventListener(
+      "click",
+      function () {
+
+        showEventDetails(eventId);
+
+      }
+    );
+
+  }
+
+
+  const editForm =
+    document.getElementById("editEventForm");
+
+
+  if (editForm) {
+
+    editForm.addEventListener(
+      "submit",
+      function (eventSubmit) {
+
+        eventSubmit.preventDefault();
+
+
+        const updatedEvent = {
+
+          id: event.id,
+
+          name:
+            document
+              .getElementById("editEventName")
+              .value
+              .trim(),
+
+          client:
+            document
+              .getElementById("editClientName")
+              .value
+              .trim(),
+
+          date:
+            document
+              .getElementById("editEventDate")
+              .value,
+
+          callTime:
+            document
+              .getElementById("editCallTime")
+              .value,
+
+          startTime:
+            document
+              .getElementById("editStartTime")
+              .value,
+
+          endTime:
+            document
+              .getElementById("editEndTime")
+              .value,
+
+          location:
+            document
+              .getElementById("editLocation")
+              .value
+              .trim(),
+
+          maps:
+            document
+              .getElementById("editMaps")
+              .value
+              .trim(),
+
+          headcount:
+            document
+              .getElementById("editHeadcount")
+              .value,
+
+          teamLeader:
+            document
+              .getElementById("editTeamLeader")
+              .value
+              .trim(),
+
+          notes:
+            document
+              .getElementById("editNotes")
+              .value
+              .trim()
+
+        };
+
+
+        const updatedEvents =
+          events.map(function (item) {
+
+            if (
+              String(item.id) === String(eventId)
+            ) {
+
+              return updatedEvent;
+
+            }
+
+            return item;
+
+          });
+
+
+        localStorage.setItem(
+          "crewflow_events",
+          JSON.stringify(updatedEvents)
+        );
+
+
+        alert("Event updated successfully.");
+
+
+        showEventDetails(eventId);
+
+      }
+    );
 
   }
 
@@ -630,7 +1071,8 @@ function showEventDetails(eventId) {
 
 function showCreateEvent() {
 
-  const dashboard = document.querySelector(".dashboard");
+  const dashboard =
+    document.querySelector(".dashboard");
 
 
   if (!dashboard) {
@@ -672,7 +1114,10 @@ function showCreateEvent() {
       </div>
 
 
-      <form class="event-form">
+      <form
+        class="event-form"
+        id="createEventForm"
+      >
 
         <div class="form-grid">
 
@@ -849,7 +1294,7 @@ function showCreateEvent() {
           <button
             type="button"
             class="secondary-button"
-            id="cancelEventButton"
+            id="cancelCreateEvent"
           >
             Cancel
           </button>
@@ -872,94 +1317,126 @@ function showCreateEvent() {
 
 
   const cancelButton =
-    document.getElementById("cancelEventButton");
+    document.getElementById("cancelCreateEvent");
 
 
   if (cancelButton) {
 
-    cancelButton.addEventListener("click", function () {
+    cancelButton.addEventListener(
+      "click",
+      function () {
 
-      showEventsPage();
+        showEventsPage();
 
-    });
+      }
+    );
+
+  }
+
+
+  const createForm =
+    document.getElementById("createEventForm");
+
+
+  if (createForm) {
+
+    createForm.addEventListener(
+      "submit",
+      function (eventSubmit) {
+
+        eventSubmit.preventDefault();
+
+
+        const eventData = {
+
+          id: Date.now(),
+
+          name:
+            document
+              .getElementById("eventName")
+              .value
+              .trim(),
+
+          client:
+            document
+              .getElementById("clientName")
+              .value
+              .trim(),
+
+          date:
+            document
+              .getElementById("eventDate")
+              .value,
+
+          callTime:
+            document
+              .getElementById("callTime")
+              .value,
+
+          startTime:
+            document
+              .getElementById("startTime")
+              .value,
+
+          endTime:
+            document
+              .getElementById("endTime")
+              .value,
+
+          location:
+            document
+              .getElementById("location")
+              .value
+              .trim(),
+
+          maps:
+            document
+              .getElementById("maps")
+              .value
+              .trim(),
+
+          headcount:
+            document
+              .getElementById("headcount")
+              .value,
+
+          teamLeader:
+            document
+              .getElementById("teamLeader")
+              .value
+              .trim(),
+
+          notes:
+            document
+              .getElementById("notes")
+              .value
+              .trim()
+
+        };
+
+
+        const events = JSON.parse(
+          localStorage.getItem("crewflow_events") || "[]"
+        );
+
+
+        events.push(eventData);
+
+
+        localStorage.setItem(
+          "crewflow_events",
+          JSON.stringify(events)
+        );
+
+
+        alert("Event saved successfully.");
+
+
+        showEventsPage();
+
+      }
+    );
 
   }
 
 }
-
-
-/* =========================================================
-   SAVE EVENT
-========================================================= */
-
-document.addEventListener("submit", function (event) {
-
-  if (!event.target.classList.contains("event-form")) {
-    return;
-  }
-
-
-  event.preventDefault();
-
-
-  const eventData = {
-
-    name:
-      document.getElementById("eventName").value.trim(),
-
-    client:
-      document.getElementById("clientName").value.trim(),
-
-    date:
-      document.getElementById("eventDate").value,
-
-    callTime:
-      document.getElementById("callTime").value,
-
-    startTime:
-      document.getElementById("startTime").value,
-
-    endTime:
-      document.getElementById("endTime").value,
-
-    location:
-      document.getElementById("location").value.trim(),
-
-    maps:
-      document.getElementById("maps").value.trim(),
-
-    headcount:
-      document.getElementById("headcount").value,
-
-    teamLeader:
-      document.getElementById("teamLeader").value.trim(),
-
-    notes:
-      document.getElementById("notes").value.trim(),
-
-    id:
-      Date.now()
-
-  };
-
-
-  const events = JSON.parse(
-    localStorage.getItem("crewflow_events") || "[]"
-  );
-
-
-  events.push(eventData);
-
-
-  localStorage.setItem(
-    "crewflow_events",
-    JSON.stringify(events)
-  );
-
-
-  alert("Event saved successfully.");
-
-
-  showEventsPage();
-
-});
