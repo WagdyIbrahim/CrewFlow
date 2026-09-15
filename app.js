@@ -211,12 +211,9 @@ function getActiveAssignmentsForEvent(eventId){
   });
 }
 
-function getActiveAssignmentsForPerson(personId){
-  return getAssignments().filter(function(assignment){
-    return (
-      String(assignment.personId)===String(personId) &&
-      assignment.status!=="cancelled"
-    );
+function getAssignmentHistoryForPerson(personId){
+  return getAssignmentHistory().filter(function(historyItem){
+    return String(historyItem.personId)===String(personId);
   });
 }
 
