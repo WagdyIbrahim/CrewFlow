@@ -16,7 +16,7 @@ function setupNavigation(){
       if(page==="Dashboard"){showDashboard();return;}
       if(page==="People"){showPeoplePage();return;}
       if(page==="Clients"){showComingSoon("Clients");return;}
-      if(page==="Assignments"){showComingSoon("Assignments");return;}
+      if(page==="Assignments"){showAssignmentsPage();return;}
       if(page==="Availability"){showComingSoon("Availability");return;}
       if(page==="Resources"){showComingSoon("Resources");return;}
       if(page==="Notifications"){showComingSoon("Notifications");return;}
@@ -45,6 +45,14 @@ function getPeople(){
 
 function savePeople(people){
   localStorage.setItem("crewflow_people",JSON.stringify(people));
+}
+
+function getAssignments(){
+  return JSON.parse(localStorage.getItem("crewflow_assignments")||"[]");
+}
+
+function saveAssignments(assignments){
+  localStorage.setItem("crewflow_assignments",JSON.stringify(assignments));
 }
 
 function statusLabel(status){
@@ -200,6 +208,12 @@ function showEventDetails(eventId){
   const dashboard=document.querySelector(".dashboard");
   if(!dashboard)return;
 
+  const assignments=getAssignments().filter(function(item){
+    return String(item.eventId)===String(eventId);
+  });
+
+  const people=getPeople();
+
   dashboard.innerHTML=`
     <div class="page-header">
       <div>
@@ -208,6 +222,7 @@ function showEventDetails(eventId){
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;">
         <button type="button" class="primary-button" id="editEventButton">✏️ Edit Event</button>
+        <button type="button" class="primary-button" id="assignCrewFromEvent">👥 Assign Crew</button>
         <button type="button" class="secondary-button" id="deleteEventButton">🗑️ Delete Event</button>
         <button type="button" class="secondary-button" id="backToEvents">← Back to Events</button>
       </div>
@@ -239,20 +254,636 @@ function showEventDetails(eventId){
         </div>
       </div>
     </section>
+    <section class="dashboard-section">
+      <div class="section-header">
+        <div>
+          <h3>Assigned Crew</h3>
+          <p>${assignments.length} assigned / ${event.headcount||0} required.</p>
+        </div>
+      </div>
+      <div id="eventAssignedCrew"></div>
+    </section>
   `;
 
-  document.getElementById("editEventButton").addEventListener("click",function(){showEditEvent(eventId);});
+  renderAssignedCrew(event,assignments,people);
+
+  document.getElementById("editEventButton").addEventListener("click",function(){
+    showEditEvent(eventId);
+  });
+
+  document.getElementById("assignCrewFromEvent").addEventListener("click",function(){
+    showAssignmentWorkspace(eventId);
+  });
 
   document.getElementById("deleteEventButton").addEventListener("click",function(){
     if(confirm("Are you sure you want to delete this event?")){
       const remaining=events.filter(function(item){return String(item.id)!==String(eventId);});
       saveEvents(remaining);
+      saveAssignments(getAssignments().filter(function(item){
+        return String(item.eventId)!==String(eventId);
+      }));
       alert("Event deleted successfully.");
       showEventsPage();
     }
   });
 
   document.getElementById("backToEvents").addEventListener("click",showEventsPage);
+}
+
+function renderAssignedCrew(event,assignments,people){
+  const container=document.getElementById("eventAssignedCrew");
+  if(!container)return;
+
+  if(assignments.length===0){
+    container.innerHTML=`
+      <div class="empty-state">
+        <div class="empty-icon">👥</div>
+        <h3>No crew assigned</h3>
+        <p>This event does not have any crew assignments yet.</p>
+        <button type="button" class="primary-button" id="assignCrewEmptyButton">Assign Crew</button>
+      </div>
+    `;
+    document.getElementById("assignCrewEmptyButton").addEventListener("click",function(){
+      showAssignmentWorkspace(event.id);
+    });
+    return;
+  }
+
+  container.innerHTML=`
+    <div class="events-list">
+      ${assignments.map(function(assignment){
+        const person=people.find(function(item){
+          return String(item.id)===String(assignment.personId);
+        });
+        if(!person)return "";
+        return `
+          <div class="event-card">
+            <div class="event-card-main">
+              <div class="event-icon">👤</div>
+              <div>
+                <h3>${person.name||"Unnamed Person"}</h3>
+                <p>${person.role||"No role specified"}</p>
+              </div>
+            </div>
+            <div class="event-details">
+              <span>⭐ Match ${assignment.score||0}%</span>
+              <span>👤 ${person.type==="freelancer"?"Freelancer":"Employee"}</span>
+              <span>🛠️ ${person.skills||"No skills"}</span>
+              <span>📅 Assigned ${formatAssignmentDate(assignment.assignedAt)}</span>
+              <button type="button" class="secondary-button remove-assignment-button" data-assignment-id="${assignment.id}">Remove</button>
+            </div>
+          </div>
+        `;
+      }).join("")}
+    </div>
+  `;
+
+  container.querySelectorAll(".remove-assignment-button").forEach(function(button){
+    button.addEventListener("click",function(){
+      removeAssignment(button.getAttribute("data-assignment-id"),event.id);
+    });
+  });
+}
+
+function formatAssignmentDate(value){
+  if(!value)return "--";
+  const date=new Date(value);
+  if(isNaN(date.getTime()))return "--";
+  return date.toLocaleDateString();
+}
+
+function normalizeList(value){
+  if(Array.isArray(value)){
+    return value.map(function(item){return String(item).trim().toLowerCase();}).filter(Boolean);
+  }
+  return String(value||"")
+    .split(",")
+    .map(function(item){return item.trim().toLowerCase();})
+    .filter(Boolean);
+}
+
+function skillMatchScore(event,person){
+  const required=normalizeList(event.skills);
+  const personSkills=normalizeList(person.skills);
+
+  if(required.length===0)return 25;
+
+  let matched=0;
+
+  required.forEach(function(skill){
+    const found=personSkills.some(function(personSkill){
+      return personSkill===skill||personSkill.includes(skill)||skill.includes(personSkill);
+    });
+    if(found)matched++;
+  });
+
+  return Math.round((matched/required.length)*40);
+}
+
+function calculateMatchScore(event,person){
+  let score=0;
+  const reasons=[];
+  const warnings=[];
+
+  const skillScore=skillMatchScore(event,person);
+  score+=skillScore;
+
+  if(skillScore>=40){
+    reasons.push("All required skills matched");
+  }else if(skillScore>0){
+    reasons.push("Some required skills matched");
+    warnings.push("Not all required skills matched");
+  }else if(normalizeList(event.skills).length>0){
+    warnings.push("Required skills not matched");
+  }
+
+  const availability=person.availability||"Available";
+
+  if(availability==="Available"){
+    score+=20;
+    reasons.push("Available");
+  }else if(availability==="Limited"){
+    score+=10;
+    reasons.push("Limited availability");
+    warnings.push("Limited availability");
+  }else{
+    warnings.push("Currently unavailable");
+  }
+
+  if(event.travel){
+    if(person.travel){
+      score+=8;
+      reasons.push("Travel available");
+    }else{
+      warnings.push("Travel required");
+      score-=20;
+    }
+  }
+
+  if(event.overnight){
+    if(person.overnight){
+      score+=8;
+      reasons.push("Overnight available");
+    }else{
+      warnings.push("Overnight required");
+      score-=20;
+    }
+  }
+
+  if(event.weekend){
+    if(person.weekend){
+      score+=7;
+      reasons.push("Weekend available");
+    }else{
+      warnings.push("Weekend availability not confirmed");
+      score-=15;
+    }
+  }
+
+  const rating=parseFloat(person.rating)||0;
+  score+=Math.min(rating*2,10);
+
+  if(rating>=4){
+    reasons.push("Strong rating");
+  }
+
+  const assignments=getAssignments();
+  const completedAssignments=assignments.filter(function(assignment){
+    return String(assignment.personId)===String(person.id);
+  }).length;
+
+  const fairnessBonus=Math.max(0,10-Math.min(completedAssignments,10));
+  score+=fairnessBonus;
+
+  if(completedAssignments===0){
+    reasons.push("No previous assignments");
+  }else{
+    reasons.push(completedAssignments+" previous assignment"+(completedAssignments===1?"":"s"));
+  }
+
+  if(String(person.location||"").toLowerCase()===String(event.location||"").toLowerCase()&&event.location){
+    score+=5;
+    reasons.push("Same location");
+  }
+
+  score=Math.max(0,Math.min(100,Math.round(score)));
+
+  return {
+    score:score,
+    reasons:reasons,
+    warnings:warnings,
+    assignmentCount:completedAssignments
+  };
+}
+
+function getAssignmentCandidates(eventId){
+  const events=getEvents();
+  const people=getPeople();
+  const assignments=getAssignments();
+
+  const event=events.find(function(item){
+    return String(item.id)===String(eventId);
+  });
+
+  if(!event)return [];
+
+  const assignedIds=assignments
+    .filter(function(item){
+      return String(item.eventId)===String(eventId);
+    })
+    .map(function(item){
+      return String(item.personId);
+    });
+
+  return people
+    .filter(function(person){
+      return !assignedIds.includes(String(person.id));
+    })
+    .map(function(person){
+      const match=calculateMatchScore(event,person);
+      return {
+        person:person,
+        score:match.score,
+        reasons:match.reasons,
+        warnings:match.warnings,
+        assignmentCount:match.assignmentCount
+      };
+    })
+    .sort(function(a,b){
+      return b.score-a.score;
+    });
+}
+
+function showAssignmentsPage(){
+  const dashboard=document.querySelector(".dashboard");
+  if(!dashboard)return;
+
+  const events=getEvents().filter(function(event){
+    return event.status!=="completed"&&event.status!=="cancelled";
+  });
+
+  dashboard.innerHTML=`
+    <div class="page-header">
+      <div>
+        <h2>Assignments</h2>
+        <p>Match the right crew to each event based on operational requirements.</p>
+      </div>
+    </div>
+    <section class="dashboard-section">
+      <div class="section-header">
+        <div>
+          <h3>Assignment Workspace</h3>
+          <p>Select an event to see the best crew candidates.</p>
+        </div>
+      </div>
+      <div class="event-form">
+        <div class="form-grid">
+          <div class="form-group full-width">
+            <label for="assignmentEventSelect">Select Event</label>
+            <select id="assignmentEventSelect">
+              <option value="">Choose an event...</option>
+              ${events.map(function(event){
+                return `<option value="${event.id}">${event.name||"Unnamed Event"} — ${event.date||"No date"}</option>`;
+              }).join("")}
+            </select>
+          </div>
+        </div>
+      </div>
+      <div id="assignmentWorkspace"></div>
+    </section>
+  `;
+
+  const select=document.getElementById("assignmentEventSelect");
+
+  select.addEventListener("change",function(){
+    if(!select.value){
+      document.getElementById("assignmentWorkspace").innerHTML="";
+      return;
+    }
+    showAssignmentWorkspace(select.value);
+  });
+}
+
+function showAssignmentWorkspace(eventId){
+  const events=getEvents();
+  const people=getPeople();
+  const event=events.find(function(item){
+    return String(item.id)===String(eventId);
+  });
+
+  if(!event){
+    alert("Event not found.");
+    return;
+  }
+
+  const dashboard=document.querySelector(".dashboard");
+  if(!dashboard)return;
+
+  const assignments=getAssignments().filter(function(item){
+    return String(item.eventId)===String(eventId);
+  });
+
+  const candidates=getAssignmentCandidates(eventId);
+  const required=parseInt(event.headcount,10)||0;
+  const assignedCount=assignments.length;
+  const remaining=Math.max(0,required-assignedCount);
+
+  dashboard.innerHTML=`
+    <div class="page-header">
+      <div>
+        <h2>Assign Crew</h2>
+        <p>${event.name||"Unnamed Event"} — ${event.date||"No date"}</p>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button type="button" class="secondary-button" id="backToAssignments">← Back to Assignments</button>
+        <button type="button" class="secondary-button" id="viewAssignmentEvent">View Event</button>
+      </div>
+    </div>
+    <section class="dashboard-section">
+      <div class="section-header">
+        <div>
+          <h3>Event Requirements</h3>
+          <p>Compare operational requirements with crew capabilities.</p>
+        </div>
+      </div>
+      <div class="event-form">
+        <div class="form-grid">
+          <div class="form-group"><label>Event</label><input type="text" value="${event.name||"--"}" readonly></div>
+          <div class="form-group"><label>Date</label><input type="text" value="${event.date||"--"}" readonly></div>
+          <div class="form-group"><label>Location</label><input type="text" value="${event.location||"--"}" readonly></div>
+          <div class="form-group"><label>Required Crew</label><input type="text" value="${required}" readonly></div>
+          <div class="form-group"><label>Assigned</label><input type="text" value="${assignedCount}" readonly></div>
+          <div class="form-group"><label>Remaining</label><input type="text" value="${remaining}" readonly></div>
+          <div class="form-group full-width"><label>Required Skills</label><input type="text" value="${event.skills||"No specific skills entered"}" readonly></div>
+          <div class="form-group"><label>Travel</label><input type="text" value="${event.travel?"Required":"Not Required"}" readonly></div>
+          <div class="form-group"><label>Overnight</label><input type="text" value="${event.overnight?"Required":"Not Required"}" readonly></div>
+          <div class="form-group"><label>Weekend</label><input type="text" value="${event.weekend?"Required":"Not Required"}" readonly></div>
+        </div>
+      </div>
+    </section>
+    <section class="dashboard-section">
+      <div class="section-header">
+        <div>
+          <h3>Recommended Crew</h3>
+          <p>${candidates.length} available candidate${candidates.length===1?"":"s"} ranked by CrewFlow matching.</p>
+        </div>
+      </div>
+      <div id="assignmentCandidates"></div>
+    </section>
+    <section class="dashboard-section">
+      <div class="section-header">
+        <div>
+          <h3>Currently Assigned</h3>
+          <p>${assignedCount} crew member${assignedCount===1?"":"s"} assigned to this event.</p>
+        </div>
+      </div>
+      <div id="assignmentCurrentCrew"></div>
+    </section>
+  `;
+
+  document.getElementById("backToAssignments").addEventListener("click",showAssignmentsPage);
+  document.getElementById("viewAssignmentEvent").addEventListener("click",function(){
+    showEventDetails(eventId);
+  });
+
+  renderAssignmentCandidates(event,candidates,eventId);
+  renderCurrentAssignments(event,assignments,people,eventId);
+}
+
+function renderAssignmentCandidates(event,candidates,eventId){
+  const container=document.getElementById("assignmentCandidates");
+  if(!container)return;
+
+  if(candidates.length===0){
+    container.innerHTML=`
+      <div class="empty-state">
+        <div class="empty-icon">🔎</div>
+        <h3>No candidates available</h3>
+        <p>There are no unassigned crew members available for this event.</p>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML=`
+    <div class="events-list">
+      ${candidates.map(function(candidate,index){
+        const person=candidate.person;
+        const scoreClass=candidate.score>=80?"Excellent":candidate.score>=60?"Good":candidate.score>=40?"Possible":"Low Match";
+        return `
+          <div class="event-card">
+            <div class="event-card-main">
+              <div class="event-icon">${index===0?"🏆":"👤"}</div>
+              <div>
+                <h3>${person.name||"Unnamed Person"}</h3>
+                <p>${person.role||"No role specified"}${person.specialization?" • "+person.specialization:""}</p>
+              </div>
+            </div>
+            <div class="event-details">
+              <span>🎯 <strong>${candidate.score}%</strong> ${scoreClass}</span>
+              <span>👤 ${person.type==="freelancer"?"Freelancer":"Employee"}</span>
+              <span>⭐ ${person.rating||"Not rated"}</span>
+              <span>📊 ${candidate.assignmentCount} previous assignment${candidate.assignmentCount===1?"":"s"}</span>
+              <span>🛠️ ${person.skills||"No skills listed"}</span>
+            </div>
+            <div style="padding:0 20px 18px;">
+              <div style="margin-bottom:10px;">
+                <strong>Why this person:</strong>
+                <div style="margin-top:6px;color:var(--muted);line-height:1.7;">${candidate.reasons.join(" • ")||"General match"}</div>
+              </div>
+              ${candidate.warnings.length?`
+                <div style="margin-bottom:12px;">
+                  <strong>Attention:</strong>
+                  <div style="margin-top:6px;color:#b45309;line-height:1.7;">${candidate.warnings.join(" • ")}</div>
+                </div>
+              `:""}
+              <button type="button" class="primary-button assign-person-button" data-person-id="${person.id}">+ Assign ${person.name||"Person"}</button>
+            </div>
+          </div>
+        `;
+      }).join("")}
+    </div>
+  `;
+
+  container.querySelectorAll(".assign-person-button").forEach(function(button){
+    button.addEventListener("click",function(){
+      assignPersonToEvent(eventId,button.getAttribute("data-person-id"));
+    });
+  });
+}
+
+function renderCurrentAssignments(event,assignments,people,eventId){
+  const container=document.getElementById("assignmentCurrentCrew");
+  if(!container)return;
+
+  if(assignments.length===0){
+    container.innerHTML=`
+      <div class="empty-state">
+        <div class="empty-icon">👥</div>
+        <h3>No crew assigned yet</h3>
+        <p>Choose a recommended candidate above.</p>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML=`
+    <div class="events-list">
+      ${assignments.map(function(assignment){
+        const person=people.find(function(item){
+          return String(item.id)===String(assignment.personId);
+        });
+
+        if(!person)return "";
+
+        return `
+          <div class="event-card">
+            <div class="event-card-main">
+              <div class="event-icon">✅</div>
+              <div>
+                <h3>${person.name||"Unnamed Person"}</h3>
+                <p>${person.role||"No role specified"}</p>
+              </div>
+            </div>
+            <div class="event-details">
+              <span>🎯 Match ${assignment.score||0}%</span>
+              <span>👤 ${person.type==="freelancer"?"Freelancer":"Employee"}</span>
+              <span>📍 ${person.location||"No location"}</span>
+              <span>📅 ${formatAssignmentDate(assignment.assignedAt)}</span>
+              <button type="button" class="secondary-button remove-assignment-button" data-assignment-id="${assignment.id}">Remove Assignment</button>
+            </div>
+          </div>
+        `;
+      }).join("")}
+    </div>
+  `;
+
+  container.querySelectorAll(".remove-assignment-button").forEach(function(button){
+    button.addEventListener("click",function(){
+      removeAssignment(button.getAttribute("data-assignment-id"),eventId);
+    });
+  });
+}
+
+function assignPersonToEvent(eventId,personId){
+  const events=getEvents();
+  const people=getPeople();
+  const assignments=getAssignments();
+
+  const event=events.find(function(item){
+    return String(item.id)===String(eventId);
+  });
+
+  const person=people.find(function(item){
+    return String(item.id)===String(personId);
+  });
+
+  if(!event||!person){
+    alert("Event or person not found.");
+    return;
+  }
+
+  const alreadyAssigned=assignments.some(function(item){
+    return String(item.eventId)===String(eventId)&&String(item.personId)===String(personId);
+  });
+
+  if(alreadyAssigned){
+    alert("This person is already assigned to this event.");
+    return;
+  }
+
+  const required=parseInt(event.headcount,10)||0;
+  const currentCount=assignments.filter(function(item){
+    return String(item.eventId)===String(eventId);
+  }).length;
+
+  if(required>0&&currentCount>=required){
+    alert("This event already has the required number of crew members.");
+    return;
+  }
+
+  const match=calculateMatchScore(event,person);
+
+  const assignment={
+    id:Date.now(),
+    eventId:event.id,
+    personId:person.id,
+    score:match.score,
+    reasons:match.reasons,
+    assignedAt:new Date().toISOString(),
+    status:"assigned"
+  };
+
+  assignments.push(assignment);
+  saveAssignments(assignments);
+
+  const newCount=currentCount+1;
+
+  const updatedEvents=events.map(function(item){
+    if(String(item.id)!==String(eventId))return item;
+
+    let newStatus=item.status;
+
+    if(required>0&&newCount>=required){
+      newStatus="assigned";
+    }else if(newCount>0&&newStatus==="open"){
+      newStatus="assigned";
+    }
+
+    return Object.assign({},item,{
+      status:newStatus
+    });
+  });
+
+  saveEvents(updatedEvents);
+
+  alert(person.name+" assigned successfully.");
+  showAssignmentWorkspace(eventId);
+}
+
+function removeAssignment(assignmentId,eventId){
+  const assignments=getAssignments();
+
+  if(!confirm("Remove this crew assignment?"))return;
+
+  const remaining=assignments.filter(function(item){
+    return String(item.id)!==String(assignmentId);
+  });
+
+  saveAssignments(remaining);
+
+  const events=getEvents();
+  const event=events.find(function(item){
+    return String(item.id)===String(eventId);
+  });
+
+  if(event){
+    const assignedCount=remaining.filter(function(item){
+      return String(item.eventId)===String(eventId);
+    }).length;
+
+    const required=parseInt(event.headcount,10)||0;
+
+    const updatedEvents=events.map(function(item){
+      if(String(item.id)!==String(eventId))return item;
+
+      let newStatus=item.status;
+
+      if(assignedCount===0&&item.status==="assigned"){
+        newStatus="open";
+      }else if(required>0&&assignedCount<required&&item.status==="assigned"){
+        newStatus="assigned";
+      }
+
+      return Object.assign({},item,{
+        status:newStatus
+      });
+    });
+
+    saveEvents(updatedEvents);
+  }
+
+  showAssignmentWorkspace(eventId);
 }
 
 function showEditEvent(eventId){
@@ -583,6 +1214,9 @@ function showPersonDetails(personId){
     if(confirm("Are you sure you want to delete this person?")){
       const remaining=people.filter(function(item){return String(item.id)!==String(personId);});
       savePeople(remaining);
+      saveAssignments(getAssignments().filter(function(item){
+        return String(item.personId)!==String(personId);
+      }));
       alert("Person deleted successfully.");
       showPeoplePage();
     }
