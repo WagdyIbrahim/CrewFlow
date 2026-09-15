@@ -1314,10 +1314,6 @@ function calculateMatchScore(event,person){
 
   let score=skillScore;
 
-  if(skillResult.matched.length===
-40){
-  "All required skills matched";
-}
 
   if(skillResult.matched.length===normalizeList(event.skills).length&&
      normalizeList(event.skills).length>0){
