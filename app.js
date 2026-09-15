@@ -37,6 +37,20 @@ document.addEventListener("DOMContentLoaded", function () {
       event.target.textContent.includes("Create Event")
     ) {
       showCreateEvent();
+      return;
+    }
+
+
+    const eventButton = event.target.closest(".event-view-button");
+
+    if (eventButton) {
+
+      const eventId = eventButton.getAttribute("data-event-id");
+
+      showEventDetails(eventId);
+
+      return;
+
     }
 
   });
@@ -139,9 +153,11 @@ function showEventsPage() {
                   👥 ${event.headcount || "0"} crew
                 </span>
 
+
                 <button
+                  type="button"
                   class="secondary-button event-view-button"
-                  onclick="showEventDetails(${event.id})"
+                  data-event-id="${event.id}"
                 >
                   View Details
                 </button>
@@ -219,8 +235,11 @@ function showEventDetails(eventId) {
     localStorage.getItem("crewflow_events") || "[]"
   );
 
+
   const event = events.find(function (item) {
-    return item.id === eventId;
+
+    return String(item.id) === String(eventId);
+
   });
 
 
@@ -254,8 +273,9 @@ function showEventDetails(eventId) {
 
 
       <button
+        type="button"
         class="secondary-button"
-        onclick="showEventsPage()"
+        id="backToEvents"
       >
         ← Back to Events
       </button>
@@ -455,7 +475,7 @@ function showEventDetails(eventId) {
           <button
             type="button"
             class="secondary-button"
-            onclick="showEventsPage()"
+            id="backToEventsBottom"
           >
             ← Back to Events
           </button>
@@ -467,6 +487,16 @@ function showEventDetails(eventId) {
     </section>
 
   `;
+
+
+  document
+    .getElementById("backToEvents")
+    .addEventListener("click", showEventsPage);
+
+
+  document
+    .getElementById("backToEventsBottom")
+    .addEventListener("click", showEventsPage);
 
 }
 
