@@ -54,17 +54,121 @@ function showEventsPage() {
 
   const dashboard = document.querySelector(".dashboard");
 
+  const events = JSON.parse(
+    localStorage.getItem("crewflow_events") || "[]"
+  );
+
+  let eventsContent = "";
+
+
+  if (events.length === 0) {
+
+    eventsContent = `
+
+      <div class="empty-state">
+
+        <div class="empty-icon">
+          📅
+        </div>
+
+        <h3>
+          No events yet
+        </h3>
+
+        <p>
+          Create your first event to start building your crew.
+        </p>
+
+        <button class="primary-button">
+          + Create Event
+        </button>
+
+      </div>
+
+    `;
+
+  } else {
+
+    eventsContent = `
+
+      <div class="events-list">
+
+        ${events.map(function (event) {
+
+          return `
+
+            <div class="event-card">
+
+              <div class="event-card-main">
+
+                <div class="event-icon">
+                  📅
+                </div>
+
+                <div>
+
+                  <h3>
+                    ${event.name || "Unnamed Event"}
+                  </h3>
+
+                  <p>
+                    ${event.client || "No client specified"}
+                  </p>
+
+                </div>
+
+              </div>
+
+
+              <div class="event-details">
+
+                <span>
+                  📆 ${event.date || "No date"}
+                </span>
+
+                <span>
+                  🕐 ${event.startTime || "--"} - ${event.endTime || "--"}
+                </span>
+
+                <span>
+                  📍 ${event.location || "No location"}
+                </span>
+
+                <span>
+                  👥 ${event.headcount || "0"} crew
+                </span>
+
+              </div>
+
+            </div>
+
+          `;
+
+        }).join("")}
+
+      </div>
+
+    `;
+
+  }
+
+
   dashboard.innerHTML = `
 
     <div class="page-header">
 
       <div>
-        <h2>Events</h2>
+
+        <h2>
+          Events
+        </h2>
 
         <p>
           Manage events, schedules, locations and crew requirements.
         </p>
+
       </div>
+
 
       <button class="primary-button">
         + Create Event
@@ -78,33 +182,21 @@ function showEventsPage() {
       <div class="section-header">
 
         <div>
-          <h3>All Events</h3>
+
+          <h3>
+            All Events
+          </h3>
 
           <p>
-            Your upcoming and previous events will appear here.
+            ${events.length} event${events.length === 1 ? "" : "s"} registered.
           </p>
+
         </div>
 
       </div>
 
 
-      <div class="empty-state">
-
-        <div class="empty-icon">
-          📅
-        </div>
-
-        <h3>No events yet</h3>
-
-        <p>
-          Create your first event to start building your crew.
-        </p>
-
-        <button class="primary-button">
-          + Create Event
-        </button>
-
-      </div>
+      ${eventsContent}
 
     </section>
 
@@ -123,7 +215,9 @@ function showCreateEvent() {
 
       <div>
 
-        <h2>Create Event</h2>
+        <h2>
+          Create Event
+        </h2>
 
         <p>
           Enter the basic information for the new event.
@@ -138,7 +232,9 @@ function showCreateEvent() {
 
       <div class="section-header">
 
-        <h3>Event Information</h3>
+        <h3>
+          Event Information
+        </h3>
 
         <p>
           Basic details about the event and its schedule.
@@ -151,6 +247,7 @@ function showCreateEvent() {
 
         <div class="form-grid">
 
+
           <div class="form-group">
 
             <label for="eventName">
@@ -161,6 +258,7 @@ function showCreateEvent() {
               type="text"
               id="eventName"
               placeholder="Enter event name"
+              required
             >
 
           </div>
@@ -190,6 +288,7 @@ function showCreateEvent() {
             <input
               type="date"
               id="eventDate"
+              required
             >
 
           </div>
@@ -312,6 +411,7 @@ function showCreateEvent() {
 
           </div>
 
+
         </div>
 
 
@@ -324,6 +424,7 @@ function showCreateEvent() {
           >
             Cancel
           </button>
+
 
           <button
             type="submit"
@@ -341,6 +442,8 @@ function showCreateEvent() {
   `;
 
 }
+
+
 document.addEventListener("submit", function (event) {
 
   if (!event.target.classList.contains("event-form")) {
@@ -349,34 +452,53 @@ document.addEventListener("submit", function (event) {
 
   event.preventDefault();
 
+
   const eventData = {
+
     name: document.getElementById("eventName").value.trim(),
+
     client: document.getElementById("clientName").value.trim(),
+
     date: document.getElementById("eventDate").value,
+
     callTime: document.getElementById("callTime").value,
+
     startTime: document.getElementById("startTime").value,
+
     endTime: document.getElementById("endTime").value,
+
     location: document.getElementById("location").value.trim(),
+
     maps: document.getElementById("maps").value.trim(),
+
     headcount: document.getElementById("headcount").value,
+
     teamLeader: document.getElementById("teamLeader").value.trim(),
+
     notes: document.getElementById("notes").value.trim()
+
   };
+
 
   const events = JSON.parse(
     localStorage.getItem("crewflow_events") || "[]"
   );
 
+
   eventData.id = Date.now();
 
+
   events.push(eventData);
+
 
   localStorage.setItem(
     "crewflow_events",
     JSON.stringify(events)
   );
 
+
   alert("Event saved successfully.");
+
 
   showEventsPage();
 
