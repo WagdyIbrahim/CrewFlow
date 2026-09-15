@@ -1509,7 +1509,7 @@ function calculateMatchScore(event,person){
    */
 
   const completedAssignments=
-    getActiveAssignmentsForPerson(person.id).length;
+  getAssignmentHistoryForPerson(person.id).length;
 
   if(completedAssignments===0){
 
