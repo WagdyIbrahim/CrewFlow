@@ -341,3 +341,43 @@ function showCreateEvent() {
   `;
 
 }
+document.addEventListener("submit", function (event) {
+
+  if (!event.target.classList.contains("event-form")) {
+    return;
+  }
+
+  event.preventDefault();
+
+  const eventData = {
+    name: document.getElementById("eventName").value.trim(),
+    client: document.getElementById("clientName").value.trim(),
+    date: document.getElementById("eventDate").value,
+    callTime: document.getElementById("callTime").value,
+    startTime: document.getElementById("startTime").value,
+    endTime: document.getElementById("endTime").value,
+    location: document.getElementById("location").value.trim(),
+    maps: document.getElementById("maps").value.trim(),
+    headcount: document.getElementById("headcount").value,
+    teamLeader: document.getElementById("teamLeader").value.trim(),
+    notes: document.getElementById("notes").value.trim()
+  };
+
+  const events = JSON.parse(
+    localStorage.getItem("crewflow_events") || "[]"
+  );
+
+  eventData.id = Date.now();
+
+  events.push(eventData);
+
+  localStorage.setItem(
+    "crewflow_events",
+    JSON.stringify(events)
+  );
+
+  alert("Event saved successfully.");
+
+  showEventsPage();
+
+});
