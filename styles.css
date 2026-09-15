@@ -487,3 +487,104 @@ body {
   }
 
 }
+/* =========================
+   EVENT DETAILS - LARGE FIELDS
+========================= */
+
+.event-form {
+  padding: 30px;
+}
+
+.event-form .form-grid {
+  gap: 24px;
+}
+
+.event-form .form-group {
+  gap: 10px;
+}
+
+.event-form .form-group label {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.event-form .form-group input,
+.event-form .form-group textarea {
+  min-height: 52px;
+  padding: 14px 16px;
+  font-size: 16px;
+  border-radius: 10px;
+  background: #f9fafb;
+}
+
+.event-form .form-group textarea {
+  min-height: 150px;
+  line-height: 1.6;
+}
+
+.event-form .form-actions {
+  margin-top: 32px;
+  padding-top: 24px;
+}
+
+.event-form .form-actions .secondary-button {
+  padding: 13px 22px;
+  font-size: 15px;
+}
+
+
+/* Event title */
+
+.dashboard-section .section-header h3 {
+  font-size: 22px;
+}
+
+.dashboard-section .section-header p {
+  font-size: 14px;
+}
+
+
+/* Google Maps link */
+
+.maps-link {
+  display: flex;
+  align-items: center;
+  min-height: 52px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #f9fafb;
+  color: var(--primary);
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.maps-link:hover {
+  background: #eff6ff;
+}
+
+
+/* Mobile */
+
+@media (max-width: 700px) {
+
+  .event-form {
+    padding: 20px;
+  }
+
+  .event-form .form-grid {
+    gap: 18px;
+  }
+
+  .event-form .form-group input,
+  .event-form .form-group textarea {
+    min-height: 50px;
+    font-size: 15px;
+  }
+
+  .event-form .form-group textarea {
+    min-height: 130px;
+  }
+
+}
