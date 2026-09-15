@@ -1,4 +1,8 @@
-document.addEventListener("DOMContentLoaded",function(){setupNavigation();setupGlobalActions();updateDashboardStats();});
+document.addEventListener("DOMContentLoaded",function(){
+  setupNavigation();
+  setupGlobalActions();
+  updateDashboardStats();
+});
 
 function setupNavigation(){
   const navItems=document.querySelectorAll(".nav-item");
@@ -10,7 +14,7 @@ function setupNavigation(){
       const page=item.textContent.trim();
       if(page==="Events"){showEventsPage();return;}
       if(page==="Dashboard"){showDashboard();return;}
-      if(page==="People"){showComingSoon("People");return;}
+      if(page==="People"){showPeoplePage();return;}
       if(page==="Clients"){showComingSoon("Clients");return;}
       if(page==="Assignments"){showComingSoon("Assignments");return;}
       if(page==="Availability"){showComingSoon("Availability");return;}
@@ -22,8 +26,8 @@ function setupNavigation(){
 
 function setupGlobalActions(){
   document.addEventListener("click",function(event){
-    const createButton=event.target.closest(".primary-button");
-    if(createButton&&createButton.textContent.includes("Create Event")){showCreateEvent();}
+    const createButton=event.target.closest("#dashboardCreateEventButton");
+    if(createButton){showCreateEvent();}
   });
 }
 
@@ -33,6 +37,14 @@ function getEvents(){
 
 function saveEvents(events){
   localStorage.setItem("crewflow_events",JSON.stringify(events));
+}
+
+function getPeople(){
+  return JSON.parse(localStorage.getItem("crewflow_people")||"[]");
+}
+
+function savePeople(people){
+  localStorage.setItem("crewflow_people",JSON.stringify(people));
 }
 
 function statusLabel(status){
@@ -65,8 +77,7 @@ function updateDashboardStats(){
   const pendingEvents=events.filter(function(event){
     return event.status==="open"||event.status==="draft";
   });
-  const availableCrew=localStorage.getItem("crewflow_people");
-  const people=availableCrew?JSON.parse(availableCrew):[];
+  const people=getPeople();
   const stats=document.querySelectorAll(".stat-card strong");
   if(stats.length>=4){
     stats[0].textContent=todayEvents.length;
@@ -410,6 +421,338 @@ function showCreateEvent(){
     saveEvents(events);
     alert("Event saved successfully.");
     showEventsPage();
+  });
+}
+
+function showPeoplePage(){
+  const dashboard=document.querySelector(".dashboard");
+  if(!dashboard)return;
+  const people=getPeople();
+
+  dashboard.innerHTML=`
+    <div class="page-header">
+      <div>
+        <h2>People</h2>
+        <p>Manage employees, freelancers, skills and crew availability.</p>
+      </div>
+      <button type="button" class="primary-button" id="createPersonButton">+ Add Person</button>
+    </div>
+    <section class="dashboard-section">
+      <div class="section-header">
+        <div>
+          <h3>Crew Directory</h3>
+          <p>${people.length} person${people.length===1?"":"s"} registered.</p>
+        </div>
+      </div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:24px;">
+        <input id="peopleSearch" type="text" placeholder="Search people..." style="flex:1;min-width:220px;padding:14px 16px;border:1px solid var(--border);border-radius:10px;font-size:15px;">
+        <select id="peopleTypeFilter" style="min-width:180px;padding:14px 16px;border:1px solid var(--border);border-radius:10px;font-size:15px;">
+          <option value="all">All Types</option>
+          <option value="employee">Employees</option>
+          <option value="freelancer">Freelancers</option>
+        </select>
+      </div>
+      <div id="peopleContainer"></div>
+    </section>
+  `;
+
+  document.getElementById("createPersonButton").addEventListener("click",showCreatePerson);
+
+  const search=document.getElementById("peopleSearch");
+  const filter=document.getElementById("peopleTypeFilter");
+
+  function renderPeople(){
+    const searchValue=search.value.toLowerCase().trim();
+    const typeValue=filter.value;
+
+    const filtered=people.filter(function(person){
+      const text=((person.name||"")+" "+(person.role||"")+" "+(person.specialization||"")+" "+(person.skills||"")+" "+(person.location||"")).toLowerCase();
+      const matchesSearch=!searchValue||text.includes(searchValue);
+      const matchesType=typeValue==="all"||(person.type||"employee")===typeValue;
+      return matchesSearch&&matchesType;
+    });
+
+    const container=document.getElementById("peopleContainer");
+
+    if(filtered.length===0){
+      container.innerHTML=`
+        <div class="empty-state">
+          <div class="empty-icon">👥</div>
+          <h3>No people found</h3>
+          <p>Add your first employee or freelancer to CrewFlow.</p>
+          <button type="button" class="primary-button" id="createPersonEmptyButton">+ Add Person</button>
+        </div>
+      `;
+      document.getElementById("createPersonEmptyButton").addEventListener("click",showCreatePerson);
+      return;
+    }
+
+    container.innerHTML=`
+      <div class="events-list">
+        ${filtered.map(function(person){
+          const typeLabel=person.type==="freelancer"?"Freelancer":"Employee";
+          return `
+            <div class="event-card">
+              <div class="event-card-main">
+                <div class="event-icon">👤</div>
+                <div>
+                  <h3>${person.name||"Unnamed Person"}</h3>
+                  <p>${person.role||"No role specified"}${person.specialization?" • "+person.specialization:""}</p>
+                </div>
+              </div>
+              <div class="event-details">
+                <span>👤 ${typeLabel}</span>
+                <span>📍 ${person.location||"No location"}</span>
+                <span>🛠️ ${person.skills||"No skills listed"}</span>
+                <span>💰 ${person.rate||"0"} ${person.rateCurrency||"EGP"}</span>
+                <span>⭐ ${person.rating||"Not rated"}</span>
+                <button type="button" class="secondary-button person-view-button" data-person-id="${person.id}">View Details</button>
+              </div>
+            </div>
+          `;
+        }).join("")}
+      </div>
+    `;
+
+    container.querySelectorAll(".person-view-button").forEach(function(button){
+      button.addEventListener("click",function(){
+        showPersonDetails(button.getAttribute("data-person-id"));
+      });
+    });
+  }
+
+  search.addEventListener("input",renderPeople);
+  filter.addEventListener("change",renderPeople);
+  renderPeople();
+}
+
+function showPersonDetails(personId){
+  const people=getPeople();
+  const person=people.find(function(item){return String(item.id)===String(personId);});
+  if(!person){alert("Person not found.");return;}
+
+  const dashboard=document.querySelector(".dashboard");
+  if(!dashboard)return;
+
+  const typeLabel=person.type==="freelancer"?"Freelancer":"Employee";
+
+  dashboard.innerHTML=`
+    <div class="page-header">
+      <div>
+        <h2>Person Details</h2>
+        <p>Complete crew profile and operational information.</p>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button type="button" class="primary-button" id="editPersonButton">✏️ Edit Person</button>
+        <button type="button" class="secondary-button" id="deletePersonButton">🗑️ Delete Person</button>
+        <button type="button" class="secondary-button" id="backToPeople">← Back to People</button>
+      </div>
+    </div>
+    <section class="dashboard-section">
+      <div class="section-header">
+        <h3>${person.name||"Unnamed Person"}</h3>
+        <p>${person.role||"No role specified"}${person.specialization?" • "+person.specialization:""}</p>
+      </div>
+      <div class="event-form">
+        <div class="form-grid">
+          <div class="form-group"><label>Type</label><input type="text" value="${typeLabel}" readonly></div>
+          <div class="form-group"><label>Name</label><input type="text" value="${person.name||"--"}" readonly></div>
+          <div class="form-group"><label>Role / Job Title</label><input type="text" value="${person.role||"--"}" readonly></div>
+          <div class="form-group"><label>Specialization</label><input type="text" value="${person.specialization||"--"}" readonly></div>
+          <div class="form-group"><label>Location</label><input type="text" value="${person.location||"--"}" readonly></div>
+          <div class="form-group"><label>Rate</label><input type="text" value="${person.rate||"0"} ${person.rateCurrency||"EGP"}" readonly></div>
+          <div class="form-group"><label>Rating</label><input type="text" value="${person.rating||"Not rated"}" readonly></div>
+          <div class="form-group"><label>Availability</label><input type="text" value="${person.availability||"Available"}" readonly></div>
+          <div class="form-group full-width"><label>Skills</label><input type="text" value="${person.skills||"--"}" readonly></div>
+          <div class="form-group"><label>Travel</label><input type="text" value="${person.travel?"Available":"Not Available"}" readonly></div>
+          <div class="form-group"><label>Overnight</label><input type="text" value="${person.overnight?"Available":"Not Available"}" readonly></div>
+          <div class="form-group"><label>Weekend</label><input type="text" value="${person.weekend?"Available":"Not Available"}" readonly></div>
+          <div class="form-group"><label>Equipment</label><input type="text" value="${person.equipment||"--"}" readonly></div>
+          <div class="form-group full-width"><label>Work History</label><textarea rows="5" readonly>${person.workHistory||"--"}</textarea></div>
+          <div class="form-group full-width"><label>Notes</label><textarea rows="5" readonly>${person.notes||"--"}</textarea></div>
+        </div>
+      </div>
+    </section>
+  `;
+
+  document.getElementById("editPersonButton").addEventListener("click",function(){
+    showEditPerson(personId);
+  });
+
+  document.getElementById("deletePersonButton").addEventListener("click",function(){
+    if(confirm("Are you sure you want to delete this person?")){
+      const remaining=people.filter(function(item){return String(item.id)!==String(personId);});
+      savePeople(remaining);
+      alert("Person deleted successfully.");
+      showPeoplePage();
+    }
+  });
+
+  document.getElementById("backToPeople").addEventListener("click",showPeoplePage);
+}
+
+function showCreatePerson(){
+  const dashboard=document.querySelector(".dashboard");
+  if(!dashboard)return;
+
+  dashboard.innerHTML=`
+    <div class="page-header">
+      <div>
+        <h2>Add Person</h2>
+        <p>Create an employee or freelancer profile.</p>
+      </div>
+    </div>
+    <section class="dashboard-section">
+      <div class="section-header">
+        <h3>Crew Profile</h3>
+        <p>Enter the person's skills, availability and operational information.</p>
+      </div>
+      <form class="event-form" id="createPersonForm">
+        <div class="form-grid">
+          <div class="form-group"><label for="personName">Full Name</label><input type="text" id="personName" placeholder="Enter full name" required></div>
+          <div class="form-group"><label for="personType">Type</label><select id="personType"><option value="employee">Employee</option><option value="freelancer">Freelancer</option></select></div>
+          <div class="form-group"><label for="personRole">Role / Job Title</label><input type="text" id="personRole" placeholder="Camera Operator, Sound Engineer..."></div>
+          <div class="form-group"><label for="personSpecialization">Specialization</label><input type="text" id="personSpecialization" placeholder="News, Studio, Live, Production..."></div>
+          <div class="form-group"><label for="personLocation">Location</label><input type="text" id="personLocation" placeholder="Cairo, Giza..."></div>
+          <div class="form-group"><label for="personRate">Rate</label><input type="number" id="personRate" min="0" placeholder="Daily / Job rate"></div>
+          <div class="form-group"><label for="personCurrency">Currency</label><select id="personCurrency"><option value="EGP">EGP</option><option value="USD">USD</option><option value="SAR">SAR</option><option value="EUR">EUR</option></select></div>
+          <div class="form-group"><label for="personRating">Rating</label><input type="number" id="personRating" min="0" max="5" step="0.1" placeholder="0 - 5"></div>
+          <div class="form-group"><label for="personAvailability">Availability</label><select id="personAvailability"><option value="Available">Available</option><option value="Limited">Limited Availability</option><option value="Unavailable">Unavailable</option></select></div>
+          <div class="form-group full-width"><label for="personSkills">Skills</label><input type="text" id="personSkills" placeholder="Camera, Sound, Lighting, Editing..."></div>
+          <div class="form-group full-width"><label for="personEquipment">Equipment</label><input type="text" id="personEquipment" placeholder="Camera, Lens, Wireless Mic..."></div>
+          <div class="form-group"><label><input type="checkbox" id="personTravel"> Travel Available</label></div>
+          <div class="form-group"><label><input type="checkbox" id="personOvernight"> Overnight Available</label></div>
+          <div class="form-group"><label><input type="checkbox" id="personWeekend"> Weekend Available</label></div>
+          <div class="form-group full-width"><label for="personWorkHistory">Work History</label><textarea id="personWorkHistory" rows="5" placeholder="Previous work, clients, major assignments..."></textarea></div>
+          <div class="form-group full-width"><label for="personNotes">Notes</label><textarea id="personNotes" rows="5" placeholder="Additional operational notes..."></textarea></div>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="secondary-button" id="cancelCreatePerson">Cancel</button>
+          <button type="submit" class="primary-button">Save Person</button>
+        </div>
+      </form>
+    </section>
+  `;
+
+  document.getElementById("cancelCreatePerson").addEventListener("click",showPeoplePage);
+
+  document.getElementById("createPersonForm").addEventListener("submit",function(e){
+    e.preventDefault();
+
+    const person={
+      id:Date.now(),
+      name:document.getElementById("personName").value.trim(),
+      type:document.getElementById("personType").value,
+      role:document.getElementById("personRole").value.trim(),
+      specialization:document.getElementById("personSpecialization").value.trim(),
+      location:document.getElementById("personLocation").value.trim(),
+      rate:document.getElementById("personRate").value,
+      rateCurrency:document.getElementById("personCurrency").value,
+      rating:document.getElementById("personRating").value,
+      availability:document.getElementById("personAvailability").value,
+      skills:document.getElementById("personSkills").value.trim(),
+      equipment:document.getElementById("personEquipment").value.trim(),
+      travel:document.getElementById("personTravel").checked,
+      overnight:document.getElementById("personOvernight").checked,
+      weekend:document.getElementById("personWeekend").checked,
+      workHistory:document.getElementById("personWorkHistory").value.trim(),
+      notes:document.getElementById("personNotes").value.trim(),
+      createdAt:new Date().toISOString()
+    };
+
+    const people=getPeople();
+    people.push(person);
+    savePeople(people);
+    alert("Person saved successfully.");
+    showPeoplePage();
+  });
+}
+
+function showEditPerson(personId){
+  const people=getPeople();
+  const person=people.find(function(item){return String(item.id)===String(personId);});
+  if(!person){alert("Person not found.");return;}
+
+  const dashboard=document.querySelector(".dashboard");
+  if(!dashboard)return;
+
+  dashboard.innerHTML=`
+    <div class="page-header">
+      <div>
+        <h2>Edit Person</h2>
+        <p>Update the crew member's profile and availability.</p>
+      </div>
+    </div>
+    <section class="dashboard-section">
+      <div class="section-header">
+        <h3>${person.name||"Unnamed Person"}</h3>
+        <p>Edit crew information below.</p>
+      </div>
+      <form class="event-form" id="editPersonForm">
+        <div class="form-grid">
+          <div class="form-group"><label for="editPersonName">Full Name</label><input type="text" id="editPersonName" value="${person.name||""}" required></div>
+          <div class="form-group"><label for="editPersonType">Type</label><select id="editPersonType"><option value="employee">Employee</option><option value="freelancer">Freelancer</option></select></div>
+          <div class="form-group"><label for="editPersonRole">Role / Job Title</label><input type="text" id="editPersonRole" value="${person.role||""}"></div>
+          <div class="form-group"><label for="editPersonSpecialization">Specialization</label><input type="text" id="editPersonSpecialization" value="${person.specialization||""}"></div>
+          <div class="form-group"><label for="editPersonLocation">Location</label><input type="text" id="editPersonLocation" value="${person.location||""}"></div>
+          <div class="form-group"><label for="editPersonRate">Rate</label><input type="number" id="editPersonRate" min="0" value="${person.rate||""}"></div>
+          <div class="form-group"><label for="editPersonCurrency">Currency</label><select id="editPersonCurrency"><option value="EGP">EGP</option><option value="USD">USD</option><option value="SAR">SAR</option><option value="EUR">EUR</option></select></div>
+          <div class="form-group"><label for="editPersonRating">Rating</label><input type="number" id="editPersonRating" min="0" max="5" step="0.1" value="${person.rating||""}"></div>
+          <div class="form-group"><label for="editPersonAvailability">Availability</label><select id="editPersonAvailability"><option value="Available">Available</option><option value="Limited">Limited Availability</option><option value="Unavailable">Unavailable</option></select></div>
+          <div class="form-group full-width"><label for="editPersonSkills">Skills</label><input type="text" id="editPersonSkills" value="${person.skills||""}"></div>
+          <div class="form-group full-width"><label for="editPersonEquipment">Equipment</label><input type="text" id="editPersonEquipment" value="${person.equipment||""}"></div>
+          <div class="form-group"><label><input type="checkbox" id="editPersonTravel" ${person.travel?"checked":""}> Travel Available</label></div>
+          <div class="form-group"><label><input type="checkbox" id="editPersonOvernight" ${person.overnight?"checked":""}> Overnight Available</label></div>
+          <div class="form-group"><label><input type="checkbox" id="editPersonWeekend" ${person.weekend?"checked":""}> Weekend Available</label></div>
+          <div class="form-group full-width"><label for="editPersonWorkHistory">Work History</label><textarea id="editPersonWorkHistory" rows="5">${person.workHistory||""}</textarea></div>
+          <div class="form-group full-width"><label for="editPersonNotes">Notes</label><textarea id="editPersonNotes" rows="5">${person.notes||""}</textarea></div>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="secondary-button" id="cancelEditPerson">Cancel</button>
+          <button type="submit" class="primary-button">Save Changes</button>
+        </div>
+      </form>
+    </section>
+  `;
+
+  document.getElementById("editPersonType").value=person.type||"employee";
+  document.getElementById("editPersonCurrency").value=person.rateCurrency||"EGP";
+  document.getElementById("editPersonAvailability").value=person.availability||"Available";
+
+  document.getElementById("cancelEditPerson").addEventListener("click",function(){
+    showPersonDetails(personId);
+  });
+
+  document.getElementById("editPersonForm").addEventListener("submit",function(e){
+    e.preventDefault();
+
+    const updatedPerson={
+      id:person.id,
+      name:document.getElementById("editPersonName").value.trim(),
+      type:document.getElementById("editPersonType").value,
+      role:document.getElementById("editPersonRole").value.trim(),
+      specialization:document.getElementById("editPersonSpecialization").value.trim(),
+      location:document.getElementById("editPersonLocation").value.trim(),
+      rate:document.getElementById("editPersonRate").value,
+      rateCurrency:document.getElementById("editPersonCurrency").value,
+      rating:document.getElementById("editPersonRating").value,
+      availability:document.getElementById("editPersonAvailability").value,
+      skills:document.getElementById("editPersonSkills").value.trim(),
+      equipment:document.getElementById("editPersonEquipment").value.trim(),
+      travel:document.getElementById("editPersonTravel").checked,
+      overnight:document.getElementById("editPersonOvernight").checked,
+      weekend:document.getElementById("editPersonWeekend").checked,
+      workHistory:document.getElementById("editPersonWorkHistory").value.trim(),
+      notes:document.getElementById("editPersonNotes").value.trim(),
+      createdAt:person.createdAt||new Date().toISOString()
+    };
+
+    savePeople(people.map(function(item){
+      return String(item.id)===String(personId)?updatedPerson:item;
+    }));
+
+    alert("Person updated successfully.");
+    showPersonDetails(personId);
   });
 }
 
