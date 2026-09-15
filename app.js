@@ -1,3 +1,4 @@
+```javascript
 document.addEventListener("DOMContentLoaded", function () {
 
   const navItems = document.querySelectorAll(".nav-item");
@@ -138,6 +139,13 @@ function showEventsPage() {
                   👥 ${event.headcount || "0"} crew
                 </span>
 
+                <button
+                  class="secondary-button event-view-button"
+                  onclick="showEventDetails(${event.id})"
+                >
+                  View Details
+                </button>
+
               </div>
 
             </div>
@@ -197,6 +205,264 @@ function showEventsPage() {
 
 
       ${eventsContent}
+
+    </section>
+
+  `;
+
+}
+
+
+function showEventDetails(eventId) {
+
+  const events = JSON.parse(
+    localStorage.getItem("crewflow_events") || "[]"
+  );
+
+  const event = events.find(function (item) {
+    return item.id === eventId;
+  });
+
+
+  if (!event) {
+
+    alert("Event not found.");
+
+    return;
+
+  }
+
+
+  const dashboard = document.querySelector(".dashboard");
+
+
+  dashboard.innerHTML = `
+
+    <div class="page-header">
+
+      <div>
+
+        <h2>
+          Event Details
+        </h2>
+
+        <p>
+          Complete operational information for this event.
+        </p>
+
+      </div>
+
+
+      <button
+        class="secondary-button"
+        onclick="showEventsPage()"
+      >
+        ← Back to Events
+      </button>
+
+    </div>
+
+
+    <section class="dashboard-section">
+
+      <div class="section-header">
+
+        <h3>
+          ${event.name || "Unnamed Event"}
+        </h3>
+
+        <p>
+          ${event.client || "No client specified"}
+        </p>
+
+      </div>
+
+
+      <div class="event-form">
+
+        <div class="form-grid">
+
+
+          <div class="form-group">
+
+            <label>
+              Event Date
+            </label>
+
+            <input
+              type="text"
+              value="${event.date || "--"}"
+              readonly
+            >
+
+          </div>
+
+
+          <div class="form-group">
+
+            <label>
+              Client
+            </label>
+
+            <input
+              type="text"
+              value="${event.client || "--"}"
+              readonly
+            >
+
+          </div>
+
+
+          <div class="form-group">
+
+            <label>
+              Call / Assembly Time
+            </label>
+
+            <input
+              type="text"
+              value="${event.callTime || "--"}"
+              readonly
+            >
+
+          </div>
+
+
+          <div class="form-group">
+
+            <label>
+              Start Time
+            </label>
+
+            <input
+              type="text"
+              value="${event.startTime || "--"}"
+              readonly
+            >
+
+          </div>
+
+
+          <div class="form-group">
+
+            <label>
+              End Time
+            </label>
+
+            <input
+              type="text"
+              value="${event.endTime || "--"}"
+              readonly
+            >
+
+          </div>
+
+
+          <div class="form-group">
+
+            <label>
+              Required Headcount
+            </label>
+
+            <input
+              type="text"
+              value="${event.headcount || "0"}"
+              readonly
+            >
+
+          </div>
+
+
+          <div class="form-group full-width">
+
+            <label>
+              Location
+            </label>
+
+            <input
+              type="text"
+              value="${event.location || "--"}"
+              readonly
+            >
+
+          </div>
+
+
+          <div class="form-group full-width">
+
+            <label>
+              Google Maps
+            </label>
+
+            ${
+              event.maps
+                ? `
+                  <a
+                    href="${event.maps}"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="maps-link"
+                  >
+                    Open Location in Google Maps
+                  </a>
+                `
+                : `
+                  <input
+                    type="text"
+                    value="No Google Maps link"
+                    readonly
+                  >
+                `
+            }
+
+          </div>
+
+
+          <div class="form-group">
+
+            <label>
+              Team Leader
+            </label>
+
+            <input
+              type="text"
+              value="${event.teamLeader || "--"}"
+              readonly
+            >
+
+          </div>
+
+
+          <div class="form-group full-width">
+
+            <label>
+              Notes
+            </label>
+
+            <textarea
+              rows="5"
+              readonly
+            >${event.notes || "--"}</textarea>
+
+          </div>
+
+
+        </div>
+
+
+        <div class="form-actions">
+
+          <button
+            type="button"
+            class="secondary-button"
+            onclick="showEventsPage()"
+          >
+            ← Back to Events
+          </button>
+
+        </div>
+
+      </div>
 
     </section>
 
@@ -503,3 +769,4 @@ document.addEventListener("submit", function (event) {
   showEventsPage();
 
 });
+```
