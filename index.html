@@ -1,196 +1,26 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <title>CrewFlow</title>
-
+  <title>CrewFlow — نظام توزيع الأطقم</title>
   <link rel="stylesheet" href="styles.css">
 </head>
-
 <body>
 
   <header class="topbar">
-
-    <div class="brand">
-      <h1>CrewFlow</h1>
-      <span>Workforce & Field Operations</span>
-    </div>
-
-    <div class="topbar-user">
-      <span>Operations Manager</span>
-      <button>Profile</button>
-    </div>
-
+    <div class="brand">📋 CrewFlow</div>
+    <nav class="tabs">
+      <button data-tab="new-order" class="active">+ أوردر جديد</button>
+      <button data-tab="today">أوردرات اليوم</button>
+      <button data-tab="team">الفريق</button>
+    </nav>
   </header>
 
+  <main id="main"></main>
 
-  <div class="app-layout">
+  <div id="toast" class="toast"></div>
 
-    <aside class="sidebar">
-
-      <nav>
-
-        <a href="#" class="nav-item active">
-          Dashboard
-        </a>
-
-        <a href="#" class="nav-item">
-          Events
-        </a>
-
-        <a href="#" class="nav-item">
-          People
-        </a>
-
-        <a href="#" class="nav-item">
-          Clients
-        </a>
-
-        <a href="#" class="nav-item">
-          Assignments
-        </a>
-
-        <a href="#" class="nav-item">
-          Availability
-        </a>
-
-        <a href="#" class="nav-item">
-          Resources
-        </a>
-
-        <a href="#" class="nav-item">
-          Notifications
-        </a>
-
-      </nav>
-
-    </aside>
-
-
-    <main class="dashboard">
-
-      <div class="page-header">
-
-        <div>
-          <h2>Dashboard</h2>
-          <p>
-            Overview of today's field operations.
-          </p>
-        </div>
-
-        <button class="primary-button">
-          + Create Event
-        </button>
-
-      </div>
-
-
-      <section class="stats-grid">
-
-        <div class="stat-card">
-          <span class="stat-label">
-            Today's Events
-          </span>
-
-          <strong>0</strong>
-
-          <small>
-            No events scheduled
-          </small>
-        </div>
-
-
-        <div class="stat-card">
-          <span class="stat-label">
-            Available Crew
-          </span>
-
-          <strong>0</strong>
-
-          <small>
-            Ready for assignment
-          </small>
-        </div>
-
-
-        <div class="stat-card">
-          <span class="stat-label">
-            Pending Assignments
-          </span>
-
-          <strong>0</strong>
-
-          <small>
-            Require attention
-          </small>
-        </div>
-
-
-        <div class="stat-card">
-          <span class="stat-label">
-            Active Jobs
-          </span>
-
-          <strong>0</strong>
-
-          <small>
-            Currently in progress
-          </small>
-        </div>
-
-      </section>
-
-
-      <section class="dashboard-section">
-
-        <div class="section-header">
-
-          <div>
-
-            <h3>
-              Today's Events
-            </h3>
-
-            <p>
-              Events requiring operational attention.
-            </p>
-
-          </div>
-
-        </div>
-
-
-        <div class="empty-state">
-
-          <div class="empty-icon">
-            📅
-          </div>
-
-          <h3>
-            No events yet
-          </h3>
-
-          <p>
-            Create your first event to start managing
-            crew and operations.
-          </p>
-
-          <button class="primary-button">
-            + Create Event
-          </button>
-
-        </div>
-
-      </section>
-
-    </main>
-
-  </div>
-
-
-  <script src="app.js" defer></script>
-
+  <script src="app.js"></script>
 </body>
 </html>
