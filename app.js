@@ -155,12 +155,12 @@ function showEventsPage() {
 
 
                 <button
-                  type="button"
-                  class="secondary-button event-view-button"
-                  data-event-id="${event.id}"
-                >
-                  View Details
-                </button>
+  type="button"
+  class="secondary-button"
+  onclick="showEventDetails('${event.id}')"
+>
+  View Details
+</button>
 
               </div>
 
